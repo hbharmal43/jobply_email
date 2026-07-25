@@ -1,0 +1,482 @@
+{
+  "/JobplyEmail-development": [
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    },
+    {
+      "type": "aws:cdk:stack-tags",
+      "data": [
+        {
+          "key": "Application",
+          "value": "Jobply"
+        },
+        {
+          "key": "Environment",
+          "value": "development"
+        },
+        {
+          "key": "ManagedBy",
+          "value": "CDK"
+        },
+        {
+          "key": "Owner",
+          "value": "Engineering"
+        },
+        {
+          "key": "Subsystem",
+          "value": "LifecycleEmail"
+        }
+      ]
+    }
+  ],
+  "/JobplyEmail-development/FeedbackFunctionName": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "FeedbackFunctionName"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:225:5)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/JobplyEmail-development/DispatcherFunctionName": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DispatcherFunctionName"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:230:5)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/JobplyEmail-development/SenderFunctionName": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SenderFunctionName"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:235:5)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/JobplyEmail-development/SendQueueUrl": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SendQueueUrl"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:240:5)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/JobplyEmail-development/BootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BootstrapVersion"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/JobplyEmail-development/CheckBootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CheckBootstrapVersion"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/JobplyEmail-development/FeedbackFunction/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "FeedbackFunctionA9DF1893"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new NodejsFunction in aws-cdk-lib...",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:74:24)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/JobplyEmail-development/LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aFD4BFC8A"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new NodejsFunction in aws-cdk-lib...",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:74:24)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/JobplyEmail-development/SesEventRule/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SesEventRule360ABB91"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Rule2 in aws-cdk-lib...",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:98:5)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/JobplyEmail-development/SesEventRule/AllowEventRuleJobplyEmaildevelopmentFeedbackFunctionFC8AA055": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SesEventRuleAllowEventRuleJobplyEmaildevelopmentFeedbackFunctionFC8AA055B763EF90"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Rule2 in aws-cdk-lib...",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:98:5)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)"
+      ]
+    }
+  ],
+  "/JobplyEmail-development/EmailSendDLQ/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "EmailSendDLQADC925B1"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Queue2 in aws-cdk-lib...",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:110:21)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/JobplyEmail-development/EmailSendQueue/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "EmailSendQueueF54F995A"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Queue2 in aws-cdk-lib...",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:115:23)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/JobplyEmail-development/DispatcherFunction/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DispatcherFunction87C9E645"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new NodejsFunction in aws-cdk-lib...",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:126:26)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/JobplyEmail-development/DispatcherScheduleRule/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DispatcherScheduleRule05EC40FC"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Rule2 in aws-cdk-lib...",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:153:5)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/JobplyEmail-development/DispatcherScheduleRule/AllowEventRuleJobplyEmaildevelopmentDispatcherFunction7F618ECA": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DispatcherScheduleRuleAllowEventRuleJobplyEmaildevelopmentDispatcherFunction7F618ECAFB729E7E"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Rule2 in aws-cdk-lib...",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:153:5)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)"
+      ]
+    }
+  ],
+  "/JobplyEmail-development/SenderFunction/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SenderFunction5DD1AB71"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new NodejsFunction in aws-cdk-lib...",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:161:22)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/JobplyEmail-development/SendDlqNotEmptyAlarm/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SendDlqNotEmptyAlarm7A7EE41C"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Alarm2 in aws-cdk-lib...",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:203:5)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/JobplyEmail-development/SenderErrorsAlarm/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SenderErrorsAlarm2ED9BB62"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Alarm2 in aws-cdk-lib...",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:215:5)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/JobplyEmail-development/CDKMetadata/Default": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CDKMetadata"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib, node internals...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/JobplyEmail-development/FeedbackFunction/ServiceRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "FeedbackFunctionServiceRole016EA8F9"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new NodejsFunction in aws-cdk-lib...",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:74:24)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/JobplyEmail-development/FeedbackFunction/LogRetention/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "FeedbackFunctionLogRetention19610198"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new NodejsFunction in aws-cdk-lib...",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:74:24)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/JobplyEmail-development/LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/ServiceRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRole9741ECFB"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new NodejsFunction in aws-cdk-lib...",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:74:24)"
+      ]
+    }
+  ],
+  "/JobplyEmail-development/DispatcherFunction/ServiceRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DispatcherFunctionServiceRole70F54218"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new NodejsFunction in aws-cdk-lib...",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:126:26)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/JobplyEmail-development/DispatcherFunction/LogRetention/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DispatcherFunctionLogRetention8E5D3B3B"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new NodejsFunction in aws-cdk-lib...",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:126:26)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/JobplyEmail-development/SenderFunction/ServiceRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SenderFunctionServiceRoleCA9393B1"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new NodejsFunction in aws-cdk-lib...",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:161:22)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/JobplyEmail-development/SenderFunction/LogRetention/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SenderFunctionLogRetention9578CE0D"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new NodejsFunction in aws-cdk-lib...",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:161:22)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/JobplyEmail-development/SenderFunction/SqsEventSource:JobplyEmaildevelopmentEmailSendQueue74FAF9A5/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SenderFunctionSqsEventSourceJobplyEmaildevelopmentEmailSendQueue74FAF9A5C7F8E936"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...NodejsFunction.addEventSource in aws-cdk-lib...",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:188:14)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/JobplyEmail-development/FeedbackFunction/ServiceRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "FeedbackFunctionServiceRoleDefaultPolicy7B5E8DE0"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...SecretBase.grantRead in aws-cdk-lib...",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:96:20)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)"
+      ]
+    }
+  ],
+  "/JobplyEmail-development/LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/ServiceRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRoleDefaultPolicyADDA7DEB"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/JobplyEmail-development/DispatcherFunction/ServiceRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DispatcherFunctionServiceRoleDefaultPolicy92133793"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...SecretBase.grantRead in aws-cdk-lib...",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:150:20)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)"
+      ]
+    }
+  ],
+  "/JobplyEmail-development/SenderFunction/ServiceRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SenderFunctionServiceRoleDefaultPolicy06C14206"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...SecretBase.grantRead in aws-cdk-lib...",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:186:20)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)"
+      ]
+    }
+  ]
+}
