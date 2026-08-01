@@ -10,8 +10,8 @@ export interface EmailTemplate<P = Record<string, unknown>> {
   render: (payload: P) => RenderedEmail;
 }
 
-/** Shared layout so the three v1 templates look like one product, not three. */
-export function layout(bodyHtml: string): string {
+/** Shared layout so the six v1 templates look like one product, not six. */
+export function layout(bodyHtml: string, unsubscribeUrl: string): string {
   return `
     <!DOCTYPE html>
     <html>
@@ -26,7 +26,8 @@ export function layout(bodyHtml: string): string {
         </div>
         <div style="padding:0 28px 24px;">
           <p style="margin:0;font-size:12px;color:#A3A3A3;">
-            Jobply · <a href="https://jobply.ai/dashboard/settings" style="color:#A3A3A3;">Manage email preferences</a>
+            Jobply · <a href="https://jobply.ai/dashboard/settings" style="color:#A3A3A3;">Manage account</a>
+            · <a href="${unsubscribeUrl}" style="color:#A3A3A3;">Unsubscribe</a>
           </p>
         </div>
       </div>

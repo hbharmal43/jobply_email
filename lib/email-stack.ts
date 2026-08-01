@@ -12,14 +12,33 @@ import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 
 export interface JobplyEmailStackProps extends cdk.StackProps {
-  /** development | staging | production */
+  /** development | staging | production — used for resource naming and secret lookup. */
   environmentName: string;
-  /** Secrets Manager secret holding { "url": "...", "serviceKey": "..." } */
+  /**
+   * Logical environment written to email_jobs.environment and used by the
+   * dispatcher's scans/claims. Defaults to environmentName, but can diverge
+   * from it — this stack's resources are named "development" for historical
+   * reasons, but profiles/applications have no environment column, so it has
+   * always operated on real production data. Pinned explicitly in bin/app.ts
+   * rather than left to drift (see 2026-07-28 incident: an out-of-band
+   * console edit had already set this at runtime, and because the template
+   * never declared a different value, `cdk deploy` never caught the drift).
+   */
+  emailEnvironment?: string;
+  /**
+   * Secrets Manager secret holding
+   * { "url": "...", "serviceKey": "...", "emailUnsubscribeSecret": "..." }.
+   * emailUnsubscribeSecret signs/verifies the unsubscribe-link tokens the
+   * sender Lambda embeds in every lifecycle email footer — must match the
+   * EMAIL_UNSUBSCRIBE_SECRET env var configured on jobply_website.
+   */
   supabaseSecretName: string;
   /** Verified SES sending identity used as the From address. */
   fromEmail?: string;
   /** SES Configuration Set created in the console (see AWS setup notes). */
   configurationSetName?: string;
+  /** Base URL for the unsubscribe-link page (jobply_website's /email/unsubscribe route). */
+  unsubscribeBaseUrl?: string;
 }
 
 /**
@@ -60,6 +79,8 @@ export class JobplyEmailStack extends cdk.Stack {
 
     const fromEmail = props.fromEmail ?? 'Jobply <hello@jobply.ai>';
     const configurationSetName = props.configurationSetName ?? 'jobply-default';
+    const emailEnvironment = props.emailEnvironment ?? props.environmentName;
+    const unsubscribeBaseUrl = props.unsubscribeBaseUrl ?? 'https://jobply.ai/email/unsubscribe';
 
     // Secret is created once, outside CDK (see README) so the value never
     // lives in source control or CloudFormation.
@@ -84,7 +105,7 @@ export class JobplyEmailStack extends cdk.Stack {
       logRetention: logs.RetentionDays.ONE_MONTH,
       environment: {
         SUPABASE_SECRET_ID: props.supabaseSecretName,
-        ENVIRONMENT: props.environmentName,
+        ENVIRONMENT: emailEnvironment,
       },
       bundling: {
         minify: true,
@@ -137,7 +158,7 @@ export class JobplyEmailStack extends cdk.Stack {
       logRetention: logs.RetentionDays.ONE_MONTH,
       environment: {
         SUPABASE_SECRET_ID: props.supabaseSecretName,
-        ENVIRONMENT: props.environmentName,
+        ENVIRONMENT: emailEnvironment,
         QUEUE_URL: sendQueue.queueUrl,
       },
       bundling: {
@@ -172,9 +193,10 @@ export class JobplyEmailStack extends cdk.Stack {
       logRetention: logs.RetentionDays.ONE_MONTH,
       environment: {
         SUPABASE_SECRET_ID: props.supabaseSecretName,
-        ENVIRONMENT: props.environmentName,
+        ENVIRONMENT: emailEnvironment,
         FROM_EMAIL: fromEmail,
         CONFIGURATION_SET_NAME: configurationSetName,
+        UNSUBSCRIBE_BASE_URL: unsubscribeBaseUrl,
       },
       bundling: {
         minify: true,

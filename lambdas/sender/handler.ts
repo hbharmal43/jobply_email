@@ -9,15 +9,24 @@
  * Uses partial batch response (ReportBatchItemFailures) so one bad message
  * doesn't cause SQS to redeliver the whole batch.
  *
+ * Also computes a signed unsubscribe-link URL per send (HMAC-SHA256 of
+ * "userId:recipientEmail") and threads it into every template's payload, so
+ * jobply_website's /api/email/unsubscribe route can verify it without a
+ * database round trip before mutating email_preferences.
+ *
  * Env vars:
  *   SUPABASE_SECRET_ID     ARN/name of the Secrets Manager secret holding
- *                          { "url": "...", "serviceKey": "..." }
+ *                          { "url": "...", "serviceKey": "...",
+ *                            "emailUnsubscribeSecret": "..." }
  *   FROM_EMAIL              e.g. "Jobply <hello@jobply.ai>"
  *   CONFIGURATION_SET_NAME  SES configuration set (jobply-default)
+ *   UNSUBSCRIBE_BASE_URL    Base URL for the unsubscribe page (default
+ *                           https://jobply.ai/email/unsubscribe)
  *
  * Deps: @aws-sdk/client-secrets-manager, @aws-sdk/client-sesv2, @supabase/supabase-js
  */
 
+import { createHmac } from 'node:crypto';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import { SESv2Client, SendEmailCommand } from '@aws-sdk/client-sesv2';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
@@ -25,20 +34,43 @@ import { getTemplate } from './templates';
 
 const FROM_EMAIL = process.env.FROM_EMAIL ?? 'Jobply <hello@jobply.ai>';
 const CONFIGURATION_SET_NAME = process.env.CONFIGURATION_SET_NAME ?? 'jobply-default';
+const UNSUBSCRIBE_BASE_URL = process.env.UNSUBSCRIBE_BASE_URL ?? 'https://jobply.ai/email/unsubscribe';
 
 let cachedClient: SupabaseClient | null = null;
-async function getSupabase(): Promise<SupabaseClient> {
-  if (cachedClient) return cachedClient;
+let cachedUnsubscribeSecret: string | null = null;
+
+async function loadSecret(): Promise<{ url: string; serviceKey: string; emailUnsubscribeSecret: string }> {
   const secretId = process.env.SUPABASE_SECRET_ID;
   if (!secretId) throw new Error('SUPABASE_SECRET_ID not set');
 
   const sm = new SecretsManagerClient({});
   const res = await sm.send(new GetSecretValueCommand({ SecretId: secretId }));
-  const { url, serviceKey } = JSON.parse(res.SecretString ?? '{}');
+  const { url, serviceKey, emailUnsubscribeSecret } = JSON.parse(res.SecretString ?? '{}');
   if (!url || !serviceKey) throw new Error('Supabase secret missing url/serviceKey');
+  if (!emailUnsubscribeSecret) throw new Error('Supabase secret missing emailUnsubscribeSecret');
 
+  return { url, serviceKey, emailUnsubscribeSecret };
+}
+
+async function getSupabase(): Promise<SupabaseClient> {
+  if (cachedClient) return cachedClient;
+  const { url, serviceKey, emailUnsubscribeSecret } = await loadSecret();
   cachedClient = createClient(url, serviceKey, { auth: { persistSession: false } });
+  cachedUnsubscribeSecret = emailUnsubscribeSecret;
   return cachedClient;
+}
+
+async function getUnsubscribeSecret(): Promise<string> {
+  if (cachedUnsubscribeSecret) return cachedUnsubscribeSecret;
+  await getSupabase(); // populates cachedUnsubscribeSecret as a side effect
+  return cachedUnsubscribeSecret!;
+}
+
+/** Same HMAC scheme jobply_website/app/api/email/unsubscribe verifies against. */
+function buildUnsubscribeUrl(secret: string, userId: string, recipientEmail: string): string {
+  const token = createHmac('sha256', secret).update(`${userId}:${recipientEmail}`).digest('hex');
+  const params = new URLSearchParams({ uid: userId, token });
+  return `${UNSUBSCRIBE_BASE_URL}?${params.toString()}`;
 }
 
 const ses = new SESv2Client({});
@@ -97,7 +129,9 @@ async function processOne(supabase: SupabaseClient, jobId: string): Promise<void
     throw new PermanentSendError(`No template registered for ${job.template_key}`);
   }
 
-  const rendered = template.render(job.payload ?? {});
+  const unsubscribeSecret = await getUnsubscribeSecret();
+  const unsubscribeUrl = buildUnsubscribeUrl(unsubscribeSecret, job.user_id, job.recipient_email);
+  const rendered = template.render({ ...(job.payload ?? {}), unsubscribeUrl });
 
   try {
     const result = await ses.send(new SendEmailCommand({

@@ -3,7 +3,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)",
         "...node internals, ts-node, ts-node..."
       ]
     },
@@ -41,8 +41,8 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:225:5)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:237:5)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -55,8 +55,8 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:230:5)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:242:5)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -69,8 +69,8 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:235:5)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:247:5)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -83,8 +83,8 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:240:5)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:252:5)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -124,8 +124,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new NodejsFunction in aws-cdk-lib...",
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:74:24)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:86:24)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -139,8 +139,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new NodejsFunction in aws-cdk-lib...",
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:74:24)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:86:24)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)",
         "...node internals..."
       ]
     }
@@ -154,8 +154,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new Rule2 in aws-cdk-lib...",
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:98:5)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:110:5)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -169,8 +169,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new Rule2 in aws-cdk-lib...",
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:98:5)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)"
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:110:5)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)"
       ]
     }
   ],
@@ -183,8 +183,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new Queue2 in aws-cdk-lib...",
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:110:21)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:122:21)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -198,8 +198,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new Queue2 in aws-cdk-lib...",
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:115:23)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:127:23)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -213,8 +213,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new NodejsFunction in aws-cdk-lib...",
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:126:26)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:138:26)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -228,8 +228,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new Rule2 in aws-cdk-lib...",
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:153:5)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:165:5)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -243,8 +243,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new Rule2 in aws-cdk-lib...",
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:153:5)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)"
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:165:5)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)"
       ]
     }
   ],
@@ -257,8 +257,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new NodejsFunction in aws-cdk-lib...",
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:161:22)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:173:22)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -272,8 +272,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new Alarm2 in aws-cdk-lib...",
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:203:5)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:215:5)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -287,8 +287,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new Alarm2 in aws-cdk-lib...",
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:215:5)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:227:5)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)",
         "...node internals, ts-node, ts-node..."
       ]
     }
@@ -315,8 +315,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new NodejsFunction in aws-cdk-lib...",
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:74:24)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:86:24)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)",
         "...node internals, ts-node..."
       ]
     }
@@ -330,8 +330,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new NodejsFunction in aws-cdk-lib...",
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:74:24)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:86:24)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)",
         "...node internals, ts-node..."
       ]
     }
@@ -345,7 +345,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new NodejsFunction in aws-cdk-lib...",
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:74:24)"
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:86:24)"
       ]
     }
   ],
@@ -358,8 +358,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new NodejsFunction in aws-cdk-lib...",
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:126:26)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:138:26)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)",
         "...node internals, ts-node..."
       ]
     }
@@ -373,8 +373,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new NodejsFunction in aws-cdk-lib...",
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:126:26)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:138:26)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)",
         "...node internals, ts-node..."
       ]
     }
@@ -388,8 +388,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new NodejsFunction in aws-cdk-lib...",
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:161:22)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:173:22)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)",
         "...node internals, ts-node..."
       ]
     }
@@ -403,8 +403,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new NodejsFunction in aws-cdk-lib...",
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:161:22)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:173:22)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)",
         "...node internals, ts-node..."
       ]
     }
@@ -418,8 +418,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...NodejsFunction.addEventSource in aws-cdk-lib...",
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:188:14)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)",
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:200:14)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)",
         "...node internals, ts-node..."
       ]
     }
@@ -433,8 +433,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...SecretBase.grantRead in aws-cdk-lib...",
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:96:20)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)"
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:108:20)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)"
       ]
     }
   ],
@@ -460,8 +460,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...SecretBase.grantRead in aws-cdk-lib...",
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:150:20)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)"
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:162:20)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)"
       ]
     }
   ],
@@ -474,8 +474,8 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...SecretBase.grantRead in aws-cdk-lib...",
-        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:186:20)",
-        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:10:1)"
+        "new JobplyEmailStack (D:\\coding\\Jobplyweb\\jobply-email\\lib\\email-stack.ts:198:20)",
+        "<anonymous> (D:\\coding\\Jobplyweb\\jobply-email\\bin\\app.ts:21:1)"
       ]
     }
   ]

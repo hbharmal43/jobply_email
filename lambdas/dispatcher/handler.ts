@@ -3,8 +3,15 @@
  *
  * Runs once a minute on an EventBridge Scheduler rate(1 minute) rule. Two jobs:
  *
- *  1. Scan `profiles` for the two time-based journeys and enqueue any newly
- *     due jobs (idempotent via schedule_email_job's dedupe_key conflict).
+ *  1. Scan `profiles` (joined to `applications` for two of them) for the
+ *     four time/milestone-based journeys and enqueue any newly due jobs
+ *     (idempotent via schedule_email_job's dedupe_key conflict):
+ *       - onboarding_abandoned    24h after onboarding started, still incomplete
+ *       - extension_nudge         3 days after onboarding completed, extension not installed
+ *       - application_milestone   3 days after onboarding completed — praises
+ *                                 progress or nudges a first application depending
+ *                                 on application count at that moment
+ *       - extension_feedback      once application count reaches the feedback threshold
  *     'welcome' jobs are NOT created here — they're enqueued synchronously by
  *     jobply_website's /api/auth/post-login route.
  *  2. Claim due email_jobs (lease-based, safe under overlapping runs) and
@@ -32,6 +39,8 @@ const SCAN_BATCH_SIZE = Number(process.env.SCAN_BATCH_SIZE ?? 100);
 
 const ONBOARDING_ABANDONED_DELAY_HOURS = 24;
 const EXTENSION_NUDGE_DELAY_DAYS = 3;
+const APPLICATION_MILESTONE_DELAY_DAYS = 3;
+const EXTENSION_FEEDBACK_THRESHOLD = 5;
 
 let cachedClient: SupabaseClient | null = null;
 async function getSupabase(): Promise<SupabaseClient> {
@@ -133,6 +142,86 @@ async function scanExtensionNudge(supabase: SupabaseClient): Promise<number> {
   return enqueued;
 }
 
+interface ApplicationMilestoneCandidate {
+  user_id: string;
+  email: string;
+  first_name: string | null;
+  application_count: number;
+}
+
+async function scanApplicationMilestone(supabase: SupabaseClient): Promise<number> {
+  const cutoff = new Date(Date.now() - APPLICATION_MILESTONE_DELAY_DAYS * 24 * 60 * 60 * 1000).toISOString();
+
+  const { data, error } = await supabase.rpc('get_application_milestone_candidates', {
+    p_cutoff: cutoff,
+    p_limit: SCAN_BATCH_SIZE,
+  });
+
+  if (error) {
+    console.error('get_application_milestone_candidates failed', error);
+    return 0;
+  }
+
+  let enqueued = 0;
+  for (const candidate of (data ?? []) as ApplicationMilestoneCandidate[]) {
+    const templateKey = candidate.application_count > 0 ? 'application_praise' : 'no_applications_nudge';
+    const { data: jobId, error: rpcError } = await supabase.rpc('schedule_email_job', {
+      p_user_id: candidate.user_id,
+      p_recipient_email: candidate.email,
+      p_journey_key: 'application_milestone',
+      p_template_key: templateKey,
+      p_dedupe_key: `application_milestone:${candidate.user_id}`,
+      p_category: 'lifecycle',
+      p_payload: { firstName: candidate.first_name, applicationCount: candidate.application_count },
+      p_environment: ENVIRONMENT,
+    });
+    if (rpcError) {
+      console.error('schedule_email_job (application_milestone) failed', { userId: candidate.user_id, error: rpcError });
+      continue;
+    }
+    if (jobId) enqueued++;
+  }
+  return enqueued;
+}
+
+interface ExtensionFeedbackCandidate {
+  user_id: string;
+  email: string;
+  first_name: string | null;
+}
+
+async function scanExtensionFeedback(supabase: SupabaseClient): Promise<number> {
+  const { data, error } = await supabase.rpc('get_extension_feedback_candidates', {
+    p_threshold: EXTENSION_FEEDBACK_THRESHOLD,
+    p_limit: SCAN_BATCH_SIZE,
+  });
+
+  if (error) {
+    console.error('get_extension_feedback_candidates failed', error);
+    return 0;
+  }
+
+  let enqueued = 0;
+  for (const candidate of (data ?? []) as ExtensionFeedbackCandidate[]) {
+    const { data: jobId, error: rpcError } = await supabase.rpc('schedule_email_job', {
+      p_user_id: candidate.user_id,
+      p_recipient_email: candidate.email,
+      p_journey_key: 'extension_feedback',
+      p_template_key: 'extension_feedback',
+      p_dedupe_key: `extension_feedback:${candidate.user_id}`,
+      p_category: 'lifecycle',
+      p_payload: { firstName: candidate.first_name },
+      p_environment: ENVIRONMENT,
+    });
+    if (rpcError) {
+      console.error('schedule_email_job (extension_feedback) failed', { userId: candidate.user_id, error: rpcError });
+      continue;
+    }
+    if (jobId) enqueued++;
+  }
+  return enqueued;
+}
+
 async function claimAndEnqueue(supabase: SupabaseClient): Promise<{ claimed: number; queued: number }> {
   const queueUrl = process.env.QUEUE_URL;
   if (!queueUrl) throw new Error('QUEUE_URL not set');
@@ -182,9 +271,11 @@ async function claimAndEnqueue(supabase: SupabaseClient): Promise<{ claimed: num
 export async function handler(): Promise<void> {
   const supabase = await getSupabase();
 
-  const [onboardingEnqueued, extensionEnqueued] = await Promise.all([
+  const [onboardingEnqueued, extensionEnqueued, applicationMilestoneEnqueued, extensionFeedbackEnqueued] = await Promise.all([
     scanOnboardingAbandoned(supabase),
     scanExtensionNudge(supabase),
+    scanApplicationMilestone(supabase),
+    scanExtensionFeedback(supabase),
   ]);
 
   const { claimed, queued } = await claimAndEnqueue(supabase);
@@ -193,6 +284,8 @@ export async function handler(): Promise<void> {
     environment: ENVIRONMENT,
     onboardingEnqueued,
     extensionEnqueued,
+    applicationMilestoneEnqueued,
+    extensionFeedbackEnqueued,
     claimed,
     queued,
   });

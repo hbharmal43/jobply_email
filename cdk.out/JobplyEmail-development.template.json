@@ -83,7 +83,7 @@
     "Environment": {
      "Variables": {
       "SUPABASE_SECRET_ID": "jobply-email/development/supabase",
-      "ENVIRONMENT": "development"
+      "ENVIRONMENT": "production"
      }
     },
     "FunctionName": "jobply-email-development-feedback",
@@ -398,13 +398,13 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-491085388967-us-east-1",
-     "S3Key": "c55e9e7a633e7f7d7150a12288fbe97d11882ee11dc50d85a912a9cb8c87168f.zip"
+     "S3Key": "a2e20c174adee84bd7322de9ed0240b3e62195dc80ec8169e3ba2a955969bad0.zip"
     },
     "Description": "Scans for due lifecycle-email jobs and publishes them to SQS for the sender Lambda",
     "Environment": {
      "Variables": {
       "SUPABASE_SECRET_ID": "jobply-email/development/supabase",
-      "ENVIRONMENT": "development",
+      "ENVIRONMENT": "production",
       "QUEUE_URL": {
        "Ref": "EmailSendQueueF54F995A"
       }
@@ -429,7 +429,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "JobplyEmail-development/DispatcherFunction/Resource",
-    "aws:asset:path": "asset.c55e9e7a633e7f7d7150a12288fbe97d11882ee11dc50d85a912a9cb8c87168f",
+    "aws:asset:path": "asset.a2e20c174adee84bd7322de9ed0240b3e62195dc80ec8169e3ba2a955969bad0",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -606,13 +606,13 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-491085388967-us-east-1",
-     "S3Key": "f7aac538660624228cb3f46e316cc00ab47e71b1e8f86d4ea88d02b43b57802c.zip"
+     "S3Key": "18673d75ef7cb465429b3efa59d95ca27fed7ecf28fe9e19b65b579b75e08cee.zip"
     },
     "Description": "Renders and sends queued lifecycle emails through Amazon SES",
     "Environment": {
      "Variables": {
       "SUPABASE_SECRET_ID": "jobply-email/development/supabase",
-      "ENVIRONMENT": "development",
+      "ENVIRONMENT": "production",
       "FROM_EMAIL": "Jobply <hello@jobply.ai>",
       "CONFIGURATION_SET_NAME": "jobply-default"
      }
@@ -636,7 +636,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "JobplyEmail-development/SenderFunction/Resource",
-    "aws:asset:path": "asset.f7aac538660624228cb3f46e316cc00ab47e71b1e8f86d4ea88d02b43b57802c",
+    "aws:asset:path": "asset.18673d75ef7cb465429b3efa59d95ca27fed7ecf28fe9e19b65b579b75e08cee",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
