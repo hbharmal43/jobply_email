@@ -144,6 +144,13 @@ async function processOne(supabase: SupabaseClient, jobId: string): Promise<void
             Html: { Data: rendered.html, Charset: 'UTF-8' },
             Text: { Data: rendered.text, Charset: 'UTF-8' },
           },
+          // RFC 8058 one-click unsubscribe — this is what makes Gmail/Yahoo/Outlook
+          // render a native "Unsubscribe" link next to the sender, independent of
+          // anything in the HTML body.
+          Headers: [
+            { Name: 'List-Unsubscribe', Value: `<${unsubscribeUrl}>` },
+            { Name: 'List-Unsubscribe-Post', Value: 'List-Unsubscribe=One-Click' },
+          ],
         },
       },
       ConfigurationSetName: CONFIGURATION_SET_NAME,
