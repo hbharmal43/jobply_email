@@ -14,14 +14,17 @@ export const applicationPraiseTemplate: EmailTemplate<ApplicationPraisePayload> 
     const count = payload.applicationCount ?? 0;
     const jobWord = count === 1 ? 'job' : 'jobs';
     const html = layout(`
-      <h1 style="margin:0 0 12px;font-size:22px;color:#0A0A0A;">Nice work, ${name} — you're on a roll</h1>
+      <h1 style="margin:0 0 12px;font-size:22px;color:#0A0A0A;">Fantastic work, ${name} — you're making real progress!</h1>
       <p style="margin:0 0 16px;font-size:14px;color:#404040;line-height:1.6;">
-        So far you've applied to <strong>${count} ${jobWord}</strong> with Jobply. Every application
-        adds up, and consistency is what gets interviews. Keep going.
+        You've already applied to <strong>${count} ${jobWord}</strong> through Jobply. Every
+        application is a step closer to your next opportunity. Most job seekers lose momentum
+        early, but your consistency sets you apart. Stay focused, keep applying, and let every
+        application bring you one step closer to the interview — and the offer — you've been
+        working toward.
       </p>
-      ${button('Find more jobs to apply to', 'https://jobply.ai/dashboard')}
+      ${button('Find more jobs', 'https://jobply.ai/dashboard')}
     `, payload.unsubscribeUrl);
-    const text = `Nice work, ${name} — you're on a roll\n\nSo far you've applied to ${count} ${jobWord} with Jobply. Keep going: https://jobply.ai/dashboard`;
+    const text = `Fantastic work, ${name} — you're making real progress!\n\nYou've already applied to ${count} ${jobWord} through Jobply. Every application is a step closer to your next opportunity. Most job seekers lose momentum early, but your consistency sets you apart. Stay focused, keep applying, and let every application bring you one step closer to the interview — and the offer — you've been working toward.\n\nFind more jobs: https://jobply.ai/dashboard`;
     return { subject: `You've applied to ${count} ${jobWord} — keep it up`, html, text };
   },
 };
