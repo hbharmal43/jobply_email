@@ -4,6 +4,7 @@ import { extensionNudgeTemplate } from './extension-nudge';
 import { applicationPraiseTemplate } from './application-praise';
 import { noApplicationsNudgeTemplate } from './no-applications-nudge';
 import { extensionFeedbackTemplate } from './extension-feedback';
+import { jobRecommendationsTemplate } from './job-recommendations';
 import type { EmailTemplate } from './types';
 
 export const TEMPLATES: Record<string, EmailTemplate<any>> = {
@@ -13,6 +14,7 @@ export const TEMPLATES: Record<string, EmailTemplate<any>> = {
   application_praise: applicationPraiseTemplate,
   no_applications_nudge: noApplicationsNudgeTemplate,
   extension_feedback: extensionFeedbackTemplate,
+  job_recommendations: jobRecommendationsTemplate,
 };
 
 export function getTemplate(templateKey: string): EmailTemplate<any> | undefined {
