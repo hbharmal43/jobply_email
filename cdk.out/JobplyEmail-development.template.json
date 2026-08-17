@@ -606,7 +606,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-491085388967-us-east-1",
-     "S3Key": "18673d75ef7cb465429b3efa59d95ca27fed7ecf28fe9e19b65b579b75e08cee.zip"
+     "S3Key": "101040e2173ec46747c3f6c5215154be3a0be86b38c54c80f6a53ebbbc54cc4b.zip"
     },
     "Description": "Renders and sends queued lifecycle emails through Amazon SES",
     "Environment": {
@@ -614,7 +614,8 @@
       "SUPABASE_SECRET_ID": "jobply-email/development/supabase",
       "ENVIRONMENT": "production",
       "FROM_EMAIL": "Jobply <hello@jobply.ai>",
-      "CONFIGURATION_SET_NAME": "jobply-default"
+      "CONFIGURATION_SET_NAME": "jobply-default",
+      "UNSUBSCRIBE_BASE_URL": "https://jobply.ai/email/unsubscribe"
      }
     },
     "FunctionName": "jobply-email-development-sender",
@@ -636,7 +637,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "JobplyEmail-development/SenderFunction/Resource",
-    "aws:asset:path": "asset.18673d75ef7cb465429b3efa59d95ca27fed7ecf28fe9e19b65b579b75e08cee",
+    "aws:asset:path": "asset.101040e2173ec46747c3f6c5215154be3a0be86b38c54c80f6a53ebbbc54cc4b",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }

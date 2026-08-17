@@ -10,9 +10,10 @@
  * doesn't cause SQS to redeliver the whole batch.
  *
  * Also computes a signed unsubscribe-link URL per send (HMAC-SHA256 of
- * "userId:recipientEmail") and threads it into every template's payload, so
- * jobply_website's /api/email/unsubscribe route can verify it without a
- * database round trip before mutating email_preferences.
+ * "userId:recipientEmail", with uid/email/token all carried in the URL) and
+ * threads it into every template's payload, so jobply_website's
+ * /email/unsubscribe route can verify it without a database round trip
+ * before mutating email_preferences.
  *
  * Env vars:
  *   SUPABASE_SECRET_ID     ARN/name of the Secrets Manager secret holding
@@ -66,10 +67,10 @@ async function getUnsubscribeSecret(): Promise<string> {
   return cachedUnsubscribeSecret!;
 }
 
-/** Same HMAC scheme jobply_website/app/api/email/unsubscribe verifies against. */
+/** Same HMAC scheme jobply_website/app/email/unsubscribe verifies against. */
 function buildUnsubscribeUrl(secret: string, userId: string, recipientEmail: string): string {
   const token = createHmac('sha256', secret).update(`${userId}:${recipientEmail}`).digest('hex');
-  const params = new URLSearchParams({ uid: userId, token });
+  const params = new URLSearchParams({ uid: userId, email: recipientEmail, token });
   return `${UNSUBSCRIBE_BASE_URL}?${params.toString()}`;
 }
 
@@ -144,6 +145,13 @@ async function processOne(supabase: SupabaseClient, jobId: string): Promise<void
             Html: { Data: rendered.html, Charset: 'UTF-8' },
             Text: { Data: rendered.text, Charset: 'UTF-8' },
           },
+          // RFC 8058 one-click unsubscribe — this is what makes Gmail/Yahoo/Outlook
+          // render a native "Unsubscribe" link next to the sender, independent of
+          // anything in the HTML body.
+          Headers: [
+            { Name: 'List-Unsubscribe', Value: `<${unsubscribeUrl}>` },
+            { Name: 'List-Unsubscribe-Post', Value: 'List-Unsubscribe=One-Click' },
+          ],
         },
       },
       ConfigurationSetName: CONFIGURATION_SET_NAME,
