@@ -36,6 +36,7 @@ import { getTemplate } from './templates';
 const FROM_EMAIL = process.env.FROM_EMAIL ?? 'Jobply <hello@jobply.ai>';
 const CONFIGURATION_SET_NAME = process.env.CONFIGURATION_SET_NAME ?? 'jobply-default';
 const UNSUBSCRIBE_BASE_URL = process.env.UNSUBSCRIBE_BASE_URL ?? 'https://jobply.ai/email/unsubscribe';
+const TEST_RECIPIENTS = process.env.TEST_RECIPIENTS ? process.env.TEST_RECIPIENTS.split(',').map(e => e.trim()) : null;
 
 let cachedClient: SupabaseClient | null = null;
 let cachedUnsubscribeSecret: string | null = null;
@@ -135,9 +136,10 @@ async function processOne(supabase: SupabaseClient, jobId: string): Promise<void
   const rendered = template.render({ ...(job.payload ?? {}), unsubscribeUrl });
 
   try {
+    const toAddresses = TEST_RECIPIENTS ?? [job.recipient_email];
     const result = await ses.send(new SendEmailCommand({
       FromEmailAddress: FROM_EMAIL,
-      Destination: { ToAddresses: [job.recipient_email] },
+      Destination: { ToAddresses: toAddresses },
       Content: {
         Simple: {
           Subject: { Data: rendered.subject, Charset: 'UTF-8' },

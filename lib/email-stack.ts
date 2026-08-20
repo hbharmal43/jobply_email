@@ -197,6 +197,7 @@ export class JobplyEmailStack extends cdk.Stack {
         FROM_EMAIL: fromEmail,
         CONFIGURATION_SET_NAME: configurationSetName,
         UNSUBSCRIBE_BASE_URL: unsubscribeBaseUrl,
+        TEST_RECIPIENTS: 'hasnain@jobply.ai,poojarshah25@gmail.com',
       },
       bundling: {
         minify: true,
