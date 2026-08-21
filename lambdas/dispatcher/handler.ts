@@ -34,8 +34,30 @@ import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? 'production';
+const PRODUCTION_MODE = process.env.PRODUCTION_MODE === 'true';
 const CLAIM_BATCH_SIZE = Number(process.env.CLAIM_BATCH_SIZE ?? 50);
 const SCAN_BATCH_SIZE = Number(process.env.SCAN_BATCH_SIZE ?? 100);
+
+const SCANNED_JOURNEYS = [
+  'onboarding_abandoned',
+  'extension_nudge',
+  'application_milestone',
+  'extension_feedback',
+  'job_recommendations',
+] as const;
+
+type ScannedJourney = (typeof SCANNED_JOURNEYS)[number];
+
+const ENABLED_JOURNEYS = new Set(
+  (process.env.ENABLED_JOURNEYS || SCANNED_JOURNEYS.join(','))
+    .split(',')
+    .map((journey) => journey.trim())
+    .filter(Boolean),
+);
+
+function scanIfEnabled(journey: ScannedJourney, scan: () => Promise<number>): Promise<number> {
+  return ENABLED_JOURNEYS.has(journey) ? scan() : Promise.resolve(0);
+}
 
 const ONBOARDING_ABANDONED_DELAY_HOURS = 24;
 const EXTENSION_NUDGE_DELAY_DAYS = 3;
@@ -222,6 +244,97 @@ async function scanExtensionFeedback(supabase: SupabaseClient): Promise<number> 
   return enqueued;
 }
 
+interface JobRecommendationCandidate {
+  user_id: string;
+  email: string;
+  first_name: string | null;
+  full_name: string | null;
+  title: string | null;
+}
+
+const JOB_RECOMMENDATIONS_LIMIT = 10;
+const TEST_USER_IDS_ENV = process.env.JOBPLY_TEST_USER_IDS;
+
+async function scanJobRecommendations(supabase: SupabaseClient): Promise<number> {
+  let candidates: JobRecommendationCandidate[] = [];
+
+  const testUserIds = TEST_USER_IDS_ENV
+    ? TEST_USER_IDS_ENV.split(',').map((id) => id.trim()).filter((id) => id.length > 0)
+    : [];
+
+  if (testUserIds.length > 0) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, email, first_name, full_name, title')
+      .in('id', testUserIds)
+      .not('email', 'is', null);
+
+    if (error) {
+      console.error('JOBPLY_TEST_USER_IDS query failed', error);
+      return 0;
+    }
+    candidates = (data ?? []).map((p: any) => ({
+      user_id: p.id,
+      email: p.email,
+      first_name: p.first_name,
+      full_name: p.full_name,
+      title: p.title,
+    }));
+  } else {
+    const { data, error } = await supabase.rpc('get_job_recommendation_candidates', {
+      p_limit: SCAN_BATCH_SIZE,
+    });
+
+    if (error) {
+      console.error('get_job_recommendation_candidates failed', error);
+      return 0;
+    }
+    candidates = (data ?? []) as JobRecommendationCandidate[];
+  }
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  let enqueued = 0;
+
+  for (const candidate of candidates) {
+    const { data: jobs, error: recError } = await supabase.rpc('recommend_jobs_for_user_v3', {
+      p_user_id: candidate.user_id,
+      p_limit: JOB_RECOMMENDATIONS_LIMIT,
+      p_sort_by: 'best',
+    });
+
+    if (recError) {
+      console.error('recommend_jobs_for_user_v3 failed', { userId: candidate.user_id, error: recError });
+      continue;
+    }
+
+    if (!jobs || !Array.isArray(jobs) || jobs.length === 0) {
+      continue;
+    }
+
+    const { data: jobId, error: rpcError } = await supabase.rpc('schedule_email_job', {
+      p_user_id: candidate.user_id,
+      p_recipient_email: candidate.email,
+      p_journey_key: 'job_recommendations',
+      p_template_key: 'job_recommendations',
+      p_dedupe_key: `job_recommendations:${candidate.user_id}:${todayStr}`,
+      p_category: 'recommendations',
+      p_payload: {
+        firstName: candidate.first_name || candidate.full_name,
+        userTitle: candidate.title,
+        jobs: jobs,
+      },
+      p_environment: ENVIRONMENT,
+    });
+
+    if (rpcError) {
+      console.error('schedule_email_job (job_recommendations) failed', { userId: candidate.user_id, error: rpcError });
+      continue;
+    }
+    if (jobId) enqueued++;
+  }
+  return enqueued;
+}
+
 async function claimAndEnqueue(supabase: SupabaseClient): Promise<{ claimed: number; queued: number }> {
   const queueUrl = process.env.QUEUE_URL;
   if (!queueUrl) throw new Error('QUEUE_URL not set');
@@ -269,23 +382,38 @@ async function claimAndEnqueue(supabase: SupabaseClient): Promise<{ claimed: num
 }
 
 export async function handler(): Promise<void> {
+  if (!PRODUCTION_MODE) {
+    console.log('dispatcher paused; no profiles scanned and no jobs claimed');
+    return;
+  }
+
   const supabase = await getSupabase();
 
-  const [onboardingEnqueued, extensionEnqueued, applicationMilestoneEnqueued, extensionFeedbackEnqueued] = await Promise.all([
-    scanOnboardingAbandoned(supabase),
-    scanExtensionNudge(supabase),
-    scanApplicationMilestone(supabase),
-    scanExtensionFeedback(supabase),
+  const [
+    onboardingEnqueued,
+    extensionEnqueued,
+    applicationMilestoneEnqueued,
+    extensionFeedbackEnqueued,
+    jobRecommendationsEnqueued,
+  ] = await Promise.all([
+    scanIfEnabled('onboarding_abandoned', () => scanOnboardingAbandoned(supabase)),
+    scanIfEnabled('extension_nudge', () => scanExtensionNudge(supabase)),
+    scanIfEnabled('application_milestone', () => scanApplicationMilestone(supabase)),
+    scanIfEnabled('extension_feedback', () => scanExtensionFeedback(supabase)),
+    scanIfEnabled('job_recommendations', () => scanJobRecommendations(supabase)),
   ]);
 
   const { claimed, queued } = await claimAndEnqueue(supabase);
 
   console.log('dispatcher run complete', {
     environment: ENVIRONMENT,
+    productionMode: PRODUCTION_MODE,
+    enabledJourneys: [...ENABLED_JOURNEYS],
     onboardingEnqueued,
     extensionEnqueued,
     applicationMilestoneEnqueued,
     extensionFeedbackEnqueued,
+    jobRecommendationsEnqueued,
     claimed,
     queued,
   });

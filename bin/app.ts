@@ -18,9 +18,62 @@ const emailEnvironment =
   (app.node.tryGetContext('emailEnv') as string) ??
   (environmentName === 'development' ? 'production' : environmentName);
 
+function csvContext(key: string): string[] {
+  return String(app.node.tryGetContext(key) ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function positiveIntegerContext(key: string, fallback: number): number {
+  const value = Number(app.node.tryGetContext(key) ?? fallback);
+  if (!Number.isInteger(value) || value < 1) {
+    throw new Error(`CDK context ${key} must be a positive integer`);
+  }
+  return value;
+}
+
+const dispatcherScheduleEnabled =
+  String(app.node.tryGetContext('enableDispatch') ?? 'false').toLowerCase() === 'true';
+
+// enableDispatch is the single mode switch. Production mode explicitly clears
+// the sender restriction; paused mode requires an allowlist and the dispatcher
+// exits before it can scan or claim any production jobs.
+const configuredTestRecipients = csvContext('testRecipients').map((email) => email.toLowerCase());
+const testRecipients = dispatcherScheduleEnabled ? [] : configuredTestRecipients;
+
+if (!dispatcherScheduleEnabled && testRecipients.length === 0) {
+  throw new Error('Paused mode requires a testRecipients CDK context value');
+}
+
+const enabledJourneys = csvContext('enabledJourneys');
+if (enabledJourneys.length === 0) {
+  throw new Error('enabledJourneys must contain at least one dispatcher journey');
+}
+
+const knownJourneys = new Set([
+  'onboarding_abandoned',
+  'extension_nudge',
+  'application_milestone',
+  'extension_feedback',
+  'job_recommendations',
+]);
+const unknownJourneys = enabledJourneys.filter((journey) => !knownJourneys.has(journey));
+if (unknownJourneys.length > 0) {
+  throw new Error(`Unknown enabledJourneys values: ${unknownJourneys.join(', ')}`);
+}
+
+const claimBatchSize = positiveIntegerContext('claimBatchSize', 25);
+const scanBatchSize = positiveIntegerContext('scanBatchSize', 100);
+
 new JobplyEmailStack(app, `JobplyEmail-${environmentName}`, {
   environmentName,
   emailEnvironment,
+  testRecipients,
+  enabledJourneys,
+  claimBatchSize,
+  scanBatchSize,
+  dispatcherScheduleEnabled,
   supabaseSecretName: `jobply-email/${environmentName}/supabase`,
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
