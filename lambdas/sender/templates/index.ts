@@ -5,6 +5,7 @@ import { applicationPraiseTemplate } from './application-praise';
 import { noApplicationsNudgeTemplate } from './no-applications-nudge';
 import { extensionFeedbackTemplate } from './extension-feedback';
 import { accountDeletedTemplate } from './account-deleted';
+import { replyStatusTemplate } from './reply-status';
 import type { EmailTemplate } from './types';
 
 export const TEMPLATES: Record<string, EmailTemplate<any>> = {
@@ -15,6 +16,7 @@ export const TEMPLATES: Record<string, EmailTemplate<any>> = {
   no_applications_nudge: noApplicationsNudgeTemplate,
   extension_feedback: extensionFeedbackTemplate,
   account_deleted: accountDeletedTemplate,
+  reply_status_check: replyStatusTemplate,
 };
 
 export function getTemplate(templateKey: string): EmailTemplate<any> | undefined {
