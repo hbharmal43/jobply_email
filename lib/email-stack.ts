@@ -9,6 +9,8 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as ses from 'aws-cdk-lib/aws-ses';
+import * as scheduler from 'aws-cdk-lib/aws-scheduler';
 import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 
 export interface JobplyEmailStackProps extends cdk.StackProps {
@@ -39,6 +41,13 @@ export interface JobplyEmailStackProps extends cdk.StackProps {
   configurationSetName?: string;
   /** Base URL for the unsubscribe-link page (jobply_website's /email/unsubscribe route). */
   unsubscribeBaseUrl?: string;
+  testRecipients?: string[];
+  enabledJourneys?: string[];
+  claimBatchSize?: number;
+  scanBatchSize?: number;
+  recommendationScanBatchSize?: number;
+  recommendationScheduleTimezone?: string;
+  dispatcherScheduleEnabled?: boolean;
 }
 
 /**
@@ -81,6 +90,11 @@ export class JobplyEmailStack extends cdk.Stack {
     const configurationSetName = props.configurationSetName ?? 'jobply-default';
     const emailEnvironment = props.emailEnvironment ?? props.environmentName;
     const unsubscribeBaseUrl = props.unsubscribeBaseUrl ?? 'https://jobply.ai/email/unsubscribe';
+    const enabledJourneys = props.enabledJourneys ?? [];
+    const lifecycleJourneys = enabledJourneys.filter(
+      (journey) => journey !== 'job_recommendations',
+    );
+    const recommendationsEnabled = enabledJourneys.includes('job_recommendations');
 
     // Secret is created once, outside CDK (see README) so the value never
     // lives in source control or CloudFormation.
@@ -115,6 +129,25 @@ export class JobplyEmailStack extends cdk.Stack {
     });
 
     supabaseSecret.grantRead(feedbackFn);
+
+    new ses.CfnConfigurationSetEventDestination(this, 'SesEventBridgeDestination', {
+      configurationSetName,
+      eventDestination: {
+        name: `jobply-email-${props.environmentName}-eventbridge`,
+        enabled: true,
+        matchingEventTypes: [
+          'SEND', 'REJECT', 'BOUNCE', 'COMPLAINT', 'DELIVERY',
+          'OPEN', 'CLICK', 'RENDERING_FAILURE', 'DELIVERY_DELAY',
+        ],
+        eventBridgeDestination: {
+          eventBusArn: cdk.Stack.of(this).formatArn({
+            service: 'events',
+            resource: 'event-bus',
+            resourceName: 'default',
+          }),
+        },
+      },
+    });
 
     new events.Rule(this, 'SesEventRule', {
       ruleName: `jobply-email-${props.environmentName}-ses-events`,
@@ -153,13 +186,18 @@ export class JobplyEmailStack extends cdk.Stack {
       // (unavailable in the Node 20 Lambda runtime).
       runtime: lambda.Runtime.NODEJS_22_X,
       memorySize: 256,
-      timeout: cdk.Duration.seconds(30),
+      timeout: cdk.Duration.minutes(5),
       reservedConcurrentExecutions: 1,
       logRetention: logs.RetentionDays.ONE_MONTH,
       environment: {
         SUPABASE_SECRET_ID: props.supabaseSecretName,
         ENVIRONMENT: emailEnvironment,
         QUEUE_URL: sendQueue.queueUrl,
+        PRODUCTION_MODE: String(props.dispatcherScheduleEnabled ?? false),
+        JOBPLY_TEST_USER_IDS: '',
+        ENABLED_JOURNEYS: lifecycleJourneys.join(','),
+        CLAIM_BATCH_SIZE: String(props.claimBatchSize ?? 25),
+        SCAN_BATCH_SIZE: String(props.scanBatchSize ?? 100),
       },
       bundling: {
         minify: true,
@@ -173,9 +211,68 @@ export class JobplyEmailStack extends cdk.Stack {
 
     new events.Rule(this, 'DispatcherScheduleRule', {
       ruleName: `jobply-email-${props.environmentName}-dispatch-schedule`,
-      description: 'Invokes the dispatcher Lambda once a minute',
+      description: 'Scans lifecycle journeys and drains due email jobs once a minute',
+      enabled: props.dispatcherScheduleEnabled ?? false,
       schedule: events.Schedule.rate(cdk.Duration.minutes(1)),
       targets: [new targets.LambdaFunction(dispatcherFn)],
+    });
+
+    // Recommendations run separately so their heavier semantic matching does
+    // not delay time-sensitive lifecycle scans. EventBridge Scheduler evaluates
+    // the cron expression in America/Chicago, including daylight-saving time.
+    const recommendationDispatcherFn = new NodejsFunction(this, 'RecommendationDispatcherFunction', {
+      functionName: `jobply-email-${props.environmentName}-recommendation-dispatcher`,
+      description: 'Builds the daily personalized job-recommendation digest',
+      entry: 'lambdas/dispatcher/handler.ts',
+      handler: 'handler',
+      runtime: lambda.Runtime.NODEJS_22_X,
+      memorySize: 256,
+      timeout: cdk.Duration.minutes(5),
+      reservedConcurrentExecutions: 1,
+      logRetention: logs.RetentionDays.ONE_MONTH,
+      environment: {
+        SUPABASE_SECRET_ID: props.supabaseSecretName,
+        ENVIRONMENT: emailEnvironment,
+        QUEUE_URL: sendQueue.queueUrl,
+        PRODUCTION_MODE: String(props.dispatcherScheduleEnabled ?? false),
+        JOBPLY_TEST_USER_IDS: '',
+        ENABLED_JOURNEYS: 'job_recommendations',
+        CLAIM_BATCH_SIZE: String(props.claimBatchSize ?? 25),
+        SCAN_BATCH_SIZE: String(props.recommendationScanBatchSize ?? 500),
+      },
+      bundling: {
+        minify: true,
+        sourceMap: true,
+        externalModules: ['@aws-sdk/*'],
+      },
+    });
+
+    supabaseSecret.grantRead(recommendationDispatcherFn);
+    sendQueue.grantSendMessages(recommendationDispatcherFn);
+
+    const recommendationSchedulerRole = new iam.Role(this, 'RecommendationSchedulerRole', {
+      assumedBy: new iam.ServicePrincipal('scheduler.amazonaws.com'),
+    });
+    recommendationDispatcherFn.grantInvoke(recommendationSchedulerRole);
+
+    new scheduler.CfnSchedule(this, 'DailyRecommendationSchedule', {
+      name: `jobply-email-${props.environmentName}-daily-recommendations`,
+      description: 'Runs personalized job recommendations daily at 9:00 AM Central',
+      scheduleExpression: 'cron(0 9 * * ? *)',
+      scheduleExpressionTimezone: props.recommendationScheduleTimezone ?? 'America/Chicago',
+      state: (props.dispatcherScheduleEnabled ?? false) && recommendationsEnabled
+        ? 'ENABLED'
+        : 'DISABLED',
+      flexibleTimeWindow: { mode: 'OFF' },
+      target: {
+        arn: recommendationDispatcherFn.functionArn,
+        roleArn: recommendationSchedulerRole.roleArn,
+        input: JSON.stringify({ journeys: ['job_recommendations'] }),
+        retryPolicy: {
+          maximumEventAgeInSeconds: 3600,
+          maximumRetryAttempts: 2,
+        },
+      },
     });
 
     // --- Sender Lambda: authorize, render, send via SES -----------------------
@@ -197,7 +294,8 @@ export class JobplyEmailStack extends cdk.Stack {
         FROM_EMAIL: fromEmail,
         CONFIGURATION_SET_NAME: configurationSetName,
         UNSUBSCRIBE_BASE_URL: unsubscribeBaseUrl,
-        TEST_RECIPIENTS: 'hasnain@jobply.ai,poojarshah25@gmail.com',
+        PRODUCTION_MODE: String(props.dispatcherScheduleEnabled ?? false),
+        TEST_RECIPIENTS: (props.testRecipients ?? []).join(','),
       },
       bundling: {
         minify: true,
@@ -253,6 +351,11 @@ export class JobplyEmailStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'DispatcherFunctionName', {
       value: dispatcherFn.functionName,
       description: 'Name of the email-jobs dispatcher Lambda',
+    });
+
+    new cdk.CfnOutput(this, 'RecommendationDispatcherFunctionName', {
+      value: recommendationDispatcherFn.functionName,
+      description: 'Name of the daily recommendation dispatcher Lambda',
     });
 
     new cdk.CfnOutput(this, 'SenderFunctionName', {

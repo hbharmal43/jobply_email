@@ -36,7 +36,12 @@ import { getTemplate } from './templates';
 const FROM_EMAIL = process.env.FROM_EMAIL ?? 'Jobply <hello@jobply.ai>';
 const CONFIGURATION_SET_NAME = process.env.CONFIGURATION_SET_NAME ?? 'jobply-default';
 const UNSUBSCRIBE_BASE_URL = process.env.UNSUBSCRIBE_BASE_URL ?? 'https://jobply.ai/email/unsubscribe';
-const TEST_RECIPIENTS = process.env.TEST_RECIPIENTS ? process.env.TEST_RECIPIENTS.split(',').map(e => e.trim()) : null;
+const TEST_RECIPIENTS = new Set(
+  (process.env.TEST_RECIPIENTS ?? '')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean),
+);
 
 let cachedClient: SupabaseClient | null = null;
 let cachedUnsubscribeSecret: string | null = null;
@@ -125,6 +130,18 @@ async function processOne(supabase: SupabaseClient, jobId: string): Promise<void
   }
 
   const job = authResult.job;
+  const normalizedRecipient = job.recipient_email.trim().toLowerCase();
+  if (TEST_RECIPIENTS.size > 0 && !TEST_RECIPIENTS.has(normalizedRecipient)) {
+    await markFailed(
+      supabase,
+      job.id,
+      'test_recipient_blocked',
+      'Recipient is not allowed while TEST_RECIPIENTS is set',
+      true,
+    );
+    throw new PermanentSendError('Recipient blocked by TEST_RECIPIENTS');
+  }
+
   const template = getTemplate(job.template_key);
   if (!template) {
     await markFailed(supabase, job.id, 'unknown_template', `No template registered for ${job.template_key}`, true);
@@ -136,10 +153,9 @@ async function processOne(supabase: SupabaseClient, jobId: string): Promise<void
   const rendered = template.render({ ...(job.payload ?? {}), unsubscribeUrl });
 
   try {
-    const toAddresses = TEST_RECIPIENTS ?? [job.recipient_email];
     const result = await ses.send(new SendEmailCommand({
       FromEmailAddress: FROM_EMAIL,
-      Destination: { ToAddresses: toAddresses },
+      Destination: { ToAddresses: [job.recipient_email] },
       Content: {
         Simple: {
           Subject: { Data: rendered.subject, Charset: 'UTF-8' },

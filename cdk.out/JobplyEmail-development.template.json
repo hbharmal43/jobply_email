@@ -77,7 +77,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-491085388967-us-east-1",
-     "S3Key": "4f4c02d0bd4b7c59597402eeecd62544fb15ea6320c1648ada5c977373213757.zip"
+     "S3Key": "cc5178602aef35eabad61f34c738003d61d480fc029c102b11ab8c478f625a4e.zip"
     },
     "Description": "Normalizes SES delivery/bounce/complaint events into Supabase",
     "Environment": {
@@ -104,7 +104,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "JobplyEmail-development/FeedbackFunction/Resource",
-    "aws:asset:path": "asset.4f4c02d0bd4b7c59597402eeecd62544fb15ea6320c1648ada5c977373213757",
+    "aws:asset:path": "asset.cc5178602aef35eabad61f34c738003d61d480fc029c102b11ab8c478f625a4e",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -222,6 +222,44 @@
     "aws:asset:path": "asset.2819175352ad1ce0dae768e83fc328fb70fb5f10b4a8ff0ccbcb791f02b0716d",
     "aws:asset:is-bundled": false,
     "aws:asset:property": "Code"
+   }
+  },
+  "SesEventBridgeDestination": {
+   "Type": "AWS::SES::ConfigurationSetEventDestination",
+   "Properties": {
+    "ConfigurationSetName": "jobply-default",
+    "EventDestination": {
+     "Enabled": true,
+     "EventBridgeDestination": {
+      "EventBusArn": {
+       "Fn::Join": [
+        "",
+        [
+         "arn:",
+         {
+          "Ref": "AWS::Partition"
+         },
+         ":events:us-east-1:491085388967:event-bus/default"
+        ]
+       ]
+      }
+     },
+     "MatchingEventTypes": [
+      "SEND",
+      "REJECT",
+      "BOUNCE",
+      "COMPLAINT",
+      "DELIVERY",
+      "OPEN",
+      "CLICK",
+      "RENDERING_FAILURE",
+      "DELIVERY_DELAY"
+     ],
+     "Name": "jobply-email-development-eventbridge"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "JobplyEmail-development/SesEventBridgeDestination"
    }
   },
   "SesEventRule360ABB91": {
@@ -398,7 +436,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-491085388967-us-east-1",
-     "S3Key": "a2e20c174adee84bd7322de9ed0240b3e62195dc80ec8169e3ba2a955969bad0.zip"
+     "S3Key": "b41e4af8d2da672a632b188d4330dba75e174f8d73c09a91295a8eaf1d673f5d.zip"
     },
     "Description": "Scans for due lifecycle-email jobs and publishes them to SQS for the sender Lambda",
     "Environment": {
@@ -407,7 +445,12 @@
       "ENVIRONMENT": "production",
       "QUEUE_URL": {
        "Ref": "EmailSendQueueF54F995A"
-      }
+      },
+      "PRODUCTION_MODE": "true",
+      "JOBPLY_TEST_USER_IDS": "",
+      "ENABLED_JOURNEYS": "onboarding_abandoned,extension_nudge,application_milestone,extension_feedback",
+      "CLAIM_BATCH_SIZE": "25",
+      "SCAN_BATCH_SIZE": "100"
      }
     },
     "FunctionName": "jobply-email-development-dispatcher",
@@ -421,7 +464,7 @@
      ]
     },
     "Runtime": "nodejs22.x",
-    "Timeout": 30
+    "Timeout": 300
    },
    "DependsOn": [
     "DispatcherFunctionServiceRoleDefaultPolicy92133793",
@@ -429,7 +472,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "JobplyEmail-development/DispatcherFunction/Resource",
-    "aws:asset:path": "asset.a2e20c174adee84bd7322de9ed0240b3e62195dc80ec8169e3ba2a955969bad0",
+    "aws:asset:path": "asset.b41e4af8d2da672a632b188d4330dba75e174f8d73c09a91295a8eaf1d673f5d",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -463,7 +506,7 @@
   "DispatcherScheduleRule05EC40FC": {
    "Type": "AWS::Events::Rule",
    "Properties": {
-    "Description": "Invokes the dispatcher Lambda once a minute",
+    "Description": "Scans lifecycle journeys and drains due email jobs once a minute",
     "Name": "jobply-email-development-dispatch-schedule",
     "ScheduleExpression": "rate(1 minute)",
     "State": "ENABLED",
@@ -503,6 +546,264 @@
    },
    "Metadata": {
     "aws:cdk:path": "JobplyEmail-development/DispatcherScheduleRule/AllowEventRuleJobplyEmaildevelopmentDispatcherFunction7F618ECA"
+   }
+  },
+  "RecommendationDispatcherFunctionServiceRoleA710597F": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "JobplyEmail-development/RecommendationDispatcherFunction/ServiceRole/Resource"
+   }
+  },
+  "RecommendationDispatcherFunctionServiceRoleDefaultPolicy1FCA078F": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:GetSecretValue"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:",
+          {
+           "Ref": "AWS::Partition"
+          },
+          ":secretsmanager:us-east-1:491085388967:secret:jobply-email/development/supabase-??????"
+         ]
+        ]
+       }
+      },
+      {
+       "Action": [
+        "sqs:GetQueueAttributes",
+        "sqs:GetQueueUrl",
+        "sqs:SendMessage"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "EmailSendQueueF54F995A",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "RecommendationDispatcherFunctionServiceRoleDefaultPolicy1FCA078F",
+    "Roles": [
+     {
+      "Ref": "RecommendationDispatcherFunctionServiceRoleA710597F"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "JobplyEmail-development/RecommendationDispatcherFunction/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "RecommendationDispatcherFunction1C067904": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-491085388967-us-east-1",
+     "S3Key": "b41e4af8d2da672a632b188d4330dba75e174f8d73c09a91295a8eaf1d673f5d.zip"
+    },
+    "Description": "Builds the daily personalized job-recommendation digest",
+    "Environment": {
+     "Variables": {
+      "SUPABASE_SECRET_ID": "jobply-email/development/supabase",
+      "ENVIRONMENT": "production",
+      "QUEUE_URL": {
+       "Ref": "EmailSendQueueF54F995A"
+      },
+      "PRODUCTION_MODE": "true",
+      "JOBPLY_TEST_USER_IDS": "",
+      "ENABLED_JOURNEYS": "job_recommendations",
+      "CLAIM_BATCH_SIZE": "25",
+      "SCAN_BATCH_SIZE": "500"
+     }
+    },
+    "FunctionName": "jobply-email-development-recommendation-dispatcher",
+    "Handler": "index.handler",
+    "MemorySize": 256,
+    "ReservedConcurrentExecutions": 1,
+    "Role": {
+     "Fn::GetAtt": [
+      "RecommendationDispatcherFunctionServiceRoleA710597F",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs22.x",
+    "Timeout": 300
+   },
+   "DependsOn": [
+    "RecommendationDispatcherFunctionServiceRoleDefaultPolicy1FCA078F",
+    "RecommendationDispatcherFunctionServiceRoleA710597F"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "JobplyEmail-development/RecommendationDispatcherFunction/Resource",
+    "aws:asset:path": "asset.b41e4af8d2da672a632b188d4330dba75e174f8d73c09a91295a8eaf1d673f5d",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code"
+   }
+  },
+  "RecommendationDispatcherFunctionLogRetention8E511FF5": {
+   "Type": "Custom::LogRetention",
+   "Properties": {
+    "ServiceToken": {
+     "Fn::GetAtt": [
+      "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aFD4BFC8A",
+      "Arn"
+     ]
+    },
+    "LogGroupName": {
+     "Fn::Join": [
+      "",
+      [
+       "/aws/lambda/",
+       {
+        "Ref": "RecommendationDispatcherFunction1C067904"
+       }
+      ]
+     ]
+    },
+    "RetentionInDays": 30
+   },
+   "Metadata": {
+    "aws:cdk:path": "JobplyEmail-development/RecommendationDispatcherFunction/LogRetention/Resource"
+   }
+  },
+  "RecommendationSchedulerRoleE02408CC": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "scheduler.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "JobplyEmail-development/RecommendationSchedulerRole/Resource"
+   }
+  },
+  "RecommendationSchedulerRoleDefaultPolicy6DEF97A5": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "lambda:InvokeFunction",
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "RecommendationDispatcherFunction1C067904",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "RecommendationDispatcherFunction1C067904",
+             "Arn"
+            ]
+           },
+           ":*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "RecommendationSchedulerRoleDefaultPolicy6DEF97A5",
+    "Roles": [
+     {
+      "Ref": "RecommendationSchedulerRoleE02408CC"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "JobplyEmail-development/RecommendationSchedulerRole/DefaultPolicy/Resource"
+   }
+  },
+  "DailyRecommendationSchedule": {
+   "Type": "AWS::Scheduler::Schedule",
+   "Properties": {
+    "Description": "Runs personalized job recommendations daily at 9:00 AM Central",
+    "FlexibleTimeWindow": {
+     "Mode": "OFF"
+    },
+    "Name": "jobply-email-development-daily-recommendations",
+    "ScheduleExpression": "cron(0 9 * * ? *)",
+    "ScheduleExpressionTimezone": "America/Chicago",
+    "State": "ENABLED",
+    "Target": {
+     "Arn": {
+      "Fn::GetAtt": [
+       "RecommendationDispatcherFunction1C067904",
+       "Arn"
+      ]
+     },
+     "Input": "{\"journeys\":[\"job_recommendations\"]}",
+     "RetryPolicy": {
+      "MaximumEventAgeInSeconds": 3600,
+      "MaximumRetryAttempts": 2
+     },
+     "RoleArn": {
+      "Fn::GetAtt": [
+       "RecommendationSchedulerRoleE02408CC",
+       "Arn"
+      ]
+     }
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "JobplyEmail-development/DailyRecommendationSchedule"
    }
   },
   "SenderFunctionServiceRoleCA9393B1": {
@@ -606,7 +907,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-491085388967-us-east-1",
-     "S3Key": "ab95b86e6d021e4e23be58a8f50e4f330f7775c7e37e8f08a193ee3520c58cc4.zip"
+     "S3Key": "daeefd8931bd88d83cc24b84b7ef5d9bf011b06364889fdaa79b49da0e62d5f6.zip"
     },
     "Description": "Renders and sends queued lifecycle emails through Amazon SES",
     "Environment": {
@@ -616,7 +917,8 @@
       "FROM_EMAIL": "Jobply <hello@jobply.ai>",
       "CONFIGURATION_SET_NAME": "jobply-default",
       "UNSUBSCRIBE_BASE_URL": "https://jobply.ai/email/unsubscribe",
-      "TEST_RECIPIENTS": "hasnain@jobply.ai,poojarshah25@gmail.com"
+      "PRODUCTION_MODE": "true",
+      "TEST_RECIPIENTS": ""
      }
     },
     "FunctionName": "jobply-email-development-sender",
@@ -638,7 +940,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "JobplyEmail-development/SenderFunction/Resource",
-    "aws:asset:path": "asset.ab95b86e6d021e4e23be58a8f50e4f330f7775c7e37e8f08a193ee3520c58cc4",
+    "aws:asset:path": "asset.daeefd8931bd88d83cc24b84b7ef5d9bf011b06364889fdaa79b49da0e62d5f6",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -746,7 +1048,7 @@
   "CDKMetadata": {
    "Type": "AWS::CDK::Metadata",
    "Properties": {
-    "Analytics": "v2:deflate64:H4sIAAAAAAAA/2VQu27DMAz8luw02zhAOydGO/Vpf4ChyLSjRJZcU4pRCPr3QnKQpdMdj+TxwBLLpy0+bsTChewuhVZHDI0T8gI1sfWzJBALt0GL8diJ1tiOzowfGV69kU5ZA0qMGGqrCareZPyyWsnfVK4sAu9awUyOcZ8AeIcHLy/kDoIJVnsMVW/urmmZ5lExp+rlSsY1OdG7mCZlhjTwX42g7cD4ZoeaHJnsRGmKMdT+FtFrisA/jOHbk89aJhGktr5bhJMnDHst5jH1MokRcvLGieF2/f6iqjef3k3eRUgfwjM/XMsSt8+43ZxZqWL2xqmRsF7xD7HlWxF3AQAA"
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/2VQyW4CMQz9Fu7GZakq9QhDe+o68wHIZDxDIJPQcQKqovx7lYC49PQW+T3ZXuDiaY6zCV1kqtrj1OgdxsaTOkLN4sKoGOgi22ho2LW0ta7lg+BHgddgldfOgqYBY+0MQ9XZgl/OaPWb5ZUlkOWWRNgLrjKALHEd1JH9moThWo+x6uy9NYd5HLRIVi9ntr4pG73T6aRtnwf+uwmM6wXfXF+zZ1uahAWrzlbOdroPI2WzYV/CGxavbbGAsyEY63A7JRhOID+C8TtwKF4hCUTtuQ2Gx1zc3AQo40J7Ia/2GFeGxiEnCkkJyt2Np/62+/3BVWc/gz8FnyD/Fw/ycF484vwZZ5ODaD0dg/V6YKyv+AfdshNbtQEAAA=="
    },
    "Metadata": {
     "aws:cdk:path": "JobplyEmail-development/CDKMetadata/Default"
@@ -764,6 +1066,12 @@
    "Description": "Name of the email-jobs dispatcher Lambda",
    "Value": {
     "Ref": "DispatcherFunction87C9E645"
+   }
+  },
+  "RecommendationDispatcherFunctionName": {
+   "Description": "Name of the daily recommendation dispatcher Lambda",
+   "Value": {
+    "Ref": "RecommendationDispatcherFunction1C067904"
    }
   },
   "SenderFunctionName": {

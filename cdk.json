@@ -5,6 +5,13 @@
     "exclude": ["README.md", "cdk*.json", "node_modules", "cdk.out"]
   },
   "context": {
+    "enableDispatch": "false",
+    "testRecipients": "hasnainbharmal4@gmail.com",
+    "enabledJourneys": "onboarding_abandoned,extension_nudge,application_milestone,extension_feedback,job_recommendations",
+    "claimBatchSize": "25",
+    "scanBatchSize": "100",
+    "recommendationScanBatchSize": "500",
+    "recommendationScheduleTimezone": "America/Chicago",
     "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
     "@aws-cdk/core:checkSecretUsage": true,
     "@aws-cdk/aws-iam:minimizePolicies": true
