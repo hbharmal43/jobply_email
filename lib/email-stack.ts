@@ -9,6 +9,7 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as ses from 'aws-cdk-lib/aws-ses';
 import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 
 export interface JobplyEmailStackProps extends cdk.StackProps {
@@ -39,6 +40,16 @@ export interface JobplyEmailStackProps extends cdk.StackProps {
   configurationSetName?: string;
   /** Base URL for the unsubscribe-link page (jobply_website's /email/unsubscribe route). */
   unsubscribeBaseUrl?: string;
+  /** Optional recipient allowlist enforced by the sender Lambda. */
+  testRecipients?: string[];
+  /** Dispatcher-created journeys that should be scanned when the schedule runs. */
+  enabledJourneys?: string[];
+  /** Maximum due jobs claimed and sent to SQS per dispatcher run. */
+  claimBatchSize?: number;
+  /** Maximum candidates scanned per enabled journey per dispatcher run. */
+  scanBatchSize?: number;
+  /** Keep false until the lifecycle journeys are approved for production recipients. */
+  dispatcherScheduleEnabled?: boolean;
 }
 
 /**
@@ -52,9 +63,9 @@ export interface JobplyEmailStackProps extends cdk.StackProps {
  *                                                              ▼
  *                                                     Supabase (RPC)
  *
- * NOTE: the SES Configuration Set + its EventBridge event destination are
- * created in the SES console (they only need to exist once per environment).
- * This stack owns the Lambda and the EventBridge rule that consumes those events.
+ * NOTE: the SES Configuration Set is created outside this stack, while this
+ * stack owns its EventBridge event destination, the Lambda, and the EventBridge
+ * rule that consumes those events.
  *
  * Part B (SES) — outbound send pipeline.
  *
@@ -116,6 +127,36 @@ export class JobplyEmailStack extends cdk.Stack {
 
     supabaseSecret.grantRead(feedbackFn);
 
+    // The configuration set already exists outside CloudFormation. Manage the
+    // EventBridge destination here so SES events actually reach the rule below.
+    // Other destinations on the same configuration set (for example SNS) are
+    // independent and are left untouched.
+    new ses.CfnConfigurationSetEventDestination(this, 'SesEventBridgeDestination', {
+      configurationSetName,
+      eventDestination: {
+        name: `jobply-email-${props.environmentName}-eventbridge`,
+        enabled: true,
+        matchingEventTypes: [
+          'SEND',
+          'REJECT',
+          'BOUNCE',
+          'COMPLAINT',
+          'DELIVERY',
+          'OPEN',
+          'CLICK',
+          'RENDERING_FAILURE',
+          'DELIVERY_DELAY',
+        ],
+        eventBridgeDestination: {
+          eventBusArn: cdk.Stack.of(this).formatArn({
+            service: 'events',
+            resource: 'event-bus',
+            resourceName: 'default',
+          }),
+        },
+      },
+    });
+
     new events.Rule(this, 'SesEventRule', {
       ruleName: `jobply-email-${props.environmentName}-ses-events`,
       description: 'Routes Amazon SES events (delivery, bounce, complaint, ...) to the feedback Lambda',
@@ -160,6 +201,13 @@ export class JobplyEmailStack extends cdk.Stack {
         SUPABASE_SECRET_ID: props.supabaseSecretName,
         ENVIRONMENT: emailEnvironment,
         QUEUE_URL: sendQueue.queueUrl,
+        PRODUCTION_MODE: String(props.dispatcherScheduleEnabled ?? false),
+        // Explicitly clear the historical console-only test-user drift. Paused
+        // mode exits before scanning; production mode must scan real users.
+        JOBPLY_TEST_USER_IDS: '',
+        ENABLED_JOURNEYS: (props.enabledJourneys ?? []).join(','),
+        CLAIM_BATCH_SIZE: String(props.claimBatchSize ?? 25),
+        SCAN_BATCH_SIZE: String(props.scanBatchSize ?? 100),
       },
       bundling: {
         minify: true,
@@ -174,6 +222,7 @@ export class JobplyEmailStack extends cdk.Stack {
     new events.Rule(this, 'DispatcherScheduleRule', {
       ruleName: `jobply-email-${props.environmentName}-dispatch-schedule`,
       description: 'Invokes the dispatcher Lambda once a minute',
+      enabled: props.dispatcherScheduleEnabled ?? false,
       schedule: events.Schedule.rate(cdk.Duration.minutes(1)),
       targets: [new targets.LambdaFunction(dispatcherFn)],
     });
@@ -197,6 +246,8 @@ export class JobplyEmailStack extends cdk.Stack {
         FROM_EMAIL: fromEmail,
         CONFIGURATION_SET_NAME: configurationSetName,
         UNSUBSCRIBE_BASE_URL: unsubscribeBaseUrl,
+        PRODUCTION_MODE: String(props.dispatcherScheduleEnabled ?? false),
+        TEST_RECIPIENTS: (props.testRecipients ?? []).join(','),
       },
       bundling: {
         minify: true,

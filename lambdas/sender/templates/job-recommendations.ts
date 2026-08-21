@@ -24,6 +24,15 @@ export interface JobRecommendationsPayload {
   unsubscribeUrl: string;
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export function formatSalary(
   salaryMin?: number | string | null,
   salaryMax?: number | string | null,
@@ -73,7 +82,7 @@ export const jobRecommendationsTemplate: EmailTemplate<JobRecommendationsPayload
     const jobs = payload.jobs || [];
     const userTitle = payload.userTitle?.trim();
 
-    const headlineTitle = `Top ${jobs.length} Best Jobs For You Today — Jobply`;
+    const headlineTitle = `${jobs.length} fresh job ${jobs.length === 1 ? 'match' : 'matches'} for you`;
 
     let jobCardsHtml = '';
     for (let idx = 0; idx < jobs.length; idx++) {
@@ -88,52 +97,86 @@ export const jobRecommendationsTemplate: EmailTemplate<JobRecommendationsPayload
 
       const salStr = formatSalary(job.salary_min, job.salary_max, job.salary_currency);
 
+      const safeTitle = escapeHtml(jobTitle);
+      const safeCompany = escapeHtml(company);
+      const safeLocation = escapeHtml(location);
+      const safeWorkArrangement = escapeHtml(workArr);
+      const safeJobLink = escapeHtml(jobLink);
+
       const badgeHtml = workArr
-        ? `<span style="background-color: #e0e7ff; color: #3730a3; padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; margin-left: 6px;">${workArr}</span>`
+        ? `<span style="display:inline-block;background:#F3F4F6;color:#404040;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:700;line-height:14px;margin-left:6px;">${safeWorkArrangement}</span>`
         : '';
 
       const salaryHtml = salStr
-        ? `<div style="font-size: 14px; font-weight: 600; color: #16a34a; margin-top: 6px;">💰 ${salStr}</div>`
+        ? `<span style="display:inline-block;background:#ECFDF3;color:#16794A;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:700;line-height:14px;">${escapeHtml(salStr)}</span>`
         : '';
 
       jobCardsHtml += `
-        <div style="background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 18px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                <div>
-                    <h3 style="margin: 0 0 6px 0; font-size: 17px; font-weight: 600; color: #111827;">
-                        <a href="${jobLink}" style="color: #2563eb; text-decoration: none;">${indexNum}. ${jobTitle}</a>
-                    </h3>
-                    <div style="font-size: 14px; font-weight: 500; color: #4b5563; margin-bottom: 4px;">🏢 ${company}</div>
-                    <div style="font-size: 13px; color: #6b7280;">📍 ${location} ${badgeHtml}</div>
-                    ${salaryHtml}
-                </div>
-            </div>
-            <div style="margin-top: 12px; text-align: right;">
-                <a href="${jobLink}" style="display: inline-block; background-color: #2563eb; color: #ffffff; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; text-decoration: none;">Apply / View Job →</a>
-            </div>
-        </div>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border:1px solid #E5E5E5;border-radius:14px;margin:0 0 14px;background:#FFFFFF;border-collapse:separate;">
+          <tr>
+            <td style="padding:20px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td width="42" valign="top" style="width:42px;padding-right:14px;">
+                    <div style="width:36px;height:36px;line-height:36px;text-align:center;background:#FFF2AE;border-radius:10px;color:#0A0A0A;font-size:12px;font-weight:800;">${String(indexNum).padStart(2, '0')}</div>
+                  </td>
+                  <td valign="top">
+                    <p style="margin:0 0 5px;color:#737373;font-size:12px;font-weight:700;line-height:17px;text-transform:uppercase;letter-spacing:.5px;">${safeCompany}</p>
+                    <h2 style="margin:0;font-size:19px;line-height:25px;font-weight:800;color:#0A0A0A;">
+                      <a href="${safeJobLink}" style="color:#0A0A0A;text-decoration:none;">${safeTitle}</a>
+                    </h2>
+                    <p style="margin:8px 0 0;color:#525252;font-size:13px;line-height:19px;">${safeLocation}${badgeHtml}</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td width="42" style="width:42px;padding-right:14px;">&nbsp;</td>
+                  <td style="padding-top:15px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td valign="middle">${salaryHtml}</td>
+                        <td align="right" valign="middle">
+                          <a href="${safeJobLink}" style="display:inline-block;background:#FFDE59;color:#0A0A0A;padding:10px 15px;border-radius:9px;font-size:13px;line-height:17px;font-weight:800;text-decoration:none;">View job &rarr;</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
       `;
     }
 
-    const titleContext = userTitle ? ` (${userTitle})` : '';
+    const titleContext = userTitle ? ` for ${escapeHtml(userTitle)}` : '';
 
     const bodyHtml = `
-      <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: #ffffff; padding: 24px; border-radius: 8px; text-align: left; margin-bottom: 20px;">
-          <h1 style="margin: 0; font-size: 22px; font-weight: 700; color: #ffffff;">Hi ${firstFirstName}, 👋</h1>
-          <p style="margin: 6px 0 0 0; font-size: 15px; color: #e0e7ff;">
-              Here are your top ${jobs.length} job matches based on your profile${titleContext}:
-          </p>
-      </div>
+      <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">Your newest Jobply matches are ready to review.</div>
 
-      <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px;">
-          ${jobCardsHtml}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background:#FFF8D8;border:1px solid #F5E7A3;border-radius:16px;border-collapse:separate;margin:0 0 24px;">
+        <tr>
+          <td style="padding:26px 24px;">
+            <p style="margin:0 0 10px;color:#6B5A00;font-size:11px;line-height:15px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;">Your daily shortlist</p>
+            <h1 style="margin:0;color:#0A0A0A;font-size:29px;line-height:34px;font-weight:850;letter-spacing:-.6px;">${jobs.length} fresh ${jobs.length === 1 ? 'role' : 'roles'} worth a look</h1>
+            <p style="margin:12px 0 0;color:#525252;font-size:15px;line-height:23px;">Selected from your experience and preferences${titleContext}.</p>
+          </td>
+        </tr>
+      </table>
 
-          <div style="text-align: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
-              <a href="${appUrl}/dashboard" style="display: inline-block; background-color: #111827; color: #ffffff; padding: 12px 24px; border-radius: 8px; font-size: 15px; font-weight: 600; text-decoration: none;">
-                  Explore All Recommendations on Jobply
-              </a>
-          </div>
-      </div>
+      <p style="margin:0 0 8px;color:#0A0A0A;font-size:16px;line-height:24px;font-weight:700;">Hi ${escapeHtml(firstFirstName)},</p>
+      <p style="margin:0 0 20px;color:#525252;font-size:14px;line-height:22px;">We narrowed today&rsquo;s listings down to the opportunities most relevant to you.</p>
+
+      ${jobCardsHtml}
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin-top:24px;">
+        <tr>
+          <td align="center">
+            <a href="${escapeHtml(appUrl)}/dashboard" style="display:inline-block;background:#0A0A0A;color:#FFFFFF;padding:14px 24px;border-radius:10px;font-size:14px;line-height:18px;font-weight:800;text-decoration:none;">See all job matches</a>
+          </td>
+        </tr>
+      </table>
+
+      <p style="margin:24px 0 0;text-align:center;color:#A3A3A3;font-size:11px;line-height:17px;">Matches improve as you save, dismiss, and apply to jobs.</p>
     `;
 
     const html = layout(bodyHtml, payload.unsubscribeUrl);
@@ -142,7 +185,7 @@ export const jobRecommendationsTemplate: EmailTemplate<JobRecommendationsPayload
     const textLines: string[] = [
       `Hi ${firstFirstName},`,
       '',
-      `Here are your top ${jobs.length} job matches today on Jobply${titleContext}:`,
+      `Here are ${jobs.length} fresh job matches selected for you today${userTitle ? ` (${userTitle})` : ''}:`,
       '='.repeat(40),
       '',
     ];
@@ -163,12 +206,12 @@ export const jobRecommendationsTemplate: EmailTemplate<JobRecommendationsPayload
       if (salStr) {
         textLines.push(`   Salary: ${salStr}`);
       }
-      textLines.push(`   Apply: ${jobLink}`);
+      textLines.push(`   View job: ${jobLink}`);
       textLines.push('');
     }
 
     textLines.push('='.repeat(40));
-    textLines.push(`View more recommendations: ${appUrl}/dashboard`);
+    textLines.push(`See all job matches: ${appUrl}/dashboard`);
     textLines.push('To manage email preferences or unsubscribe, visit your account settings.');
 
     const text = textLines.join('\n');

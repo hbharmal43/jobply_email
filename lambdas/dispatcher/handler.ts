@@ -34,8 +34,30 @@ import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? 'production';
+const PRODUCTION_MODE = process.env.PRODUCTION_MODE === 'true';
 const CLAIM_BATCH_SIZE = Number(process.env.CLAIM_BATCH_SIZE ?? 50);
 const SCAN_BATCH_SIZE = Number(process.env.SCAN_BATCH_SIZE ?? 100);
+
+const SCANNED_JOURNEYS = [
+  'onboarding_abandoned',
+  'extension_nudge',
+  'application_milestone',
+  'extension_feedback',
+  'job_recommendations',
+] as const;
+
+type ScannedJourney = (typeof SCANNED_JOURNEYS)[number];
+
+const ENABLED_JOURNEYS = new Set(
+  (process.env.ENABLED_JOURNEYS || SCANNED_JOURNEYS.join(','))
+    .split(',')
+    .map((journey) => journey.trim())
+    .filter(Boolean),
+);
+
+function scanIfEnabled(journey: ScannedJourney, scan: () => Promise<number>): Promise<number> {
+  return ENABLED_JOURNEYS.has(journey) ? scan() : Promise.resolve(0);
+}
 
 const ONBOARDING_ABANDONED_DELAY_HOURS = 24;
 const EXTENSION_NUDGE_DELAY_DAYS = 3;
@@ -360,6 +382,11 @@ async function claimAndEnqueue(supabase: SupabaseClient): Promise<{ claimed: num
 }
 
 export async function handler(): Promise<void> {
+  if (!PRODUCTION_MODE) {
+    console.log('dispatcher paused; no profiles scanned and no jobs claimed');
+    return;
+  }
+
   const supabase = await getSupabase();
 
   const [
@@ -369,17 +396,19 @@ export async function handler(): Promise<void> {
     extensionFeedbackEnqueued,
     jobRecommendationsEnqueued,
   ] = await Promise.all([
-    scanOnboardingAbandoned(supabase),
-    scanExtensionNudge(supabase),
-    scanApplicationMilestone(supabase),
-    scanExtensionFeedback(supabase),
-    scanJobRecommendations(supabase),
+    scanIfEnabled('onboarding_abandoned', () => scanOnboardingAbandoned(supabase)),
+    scanIfEnabled('extension_nudge', () => scanExtensionNudge(supabase)),
+    scanIfEnabled('application_milestone', () => scanApplicationMilestone(supabase)),
+    scanIfEnabled('extension_feedback', () => scanExtensionFeedback(supabase)),
+    scanIfEnabled('job_recommendations', () => scanJobRecommendations(supabase)),
   ]);
 
   const { claimed, queued } = await claimAndEnqueue(supabase);
 
   console.log('dispatcher run complete', {
     environment: ENVIRONMENT,
+    productionMode: PRODUCTION_MODE,
+    enabledJourneys: [...ENABLED_JOURNEYS],
     onboardingEnqueued,
     extensionEnqueued,
     applicationMilestoneEnqueued,
