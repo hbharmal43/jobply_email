@@ -15,6 +15,9 @@
  * /email/unsubscribe route can verify it without a database round trip
  * before mutating email_preferences.
  *
+ * Also picks a rotating header tagline (see ./templates/taglines) and
+ * threads it into the payload the same way.
+ *
  * Env vars:
  *   SUPABASE_SECRET_ID     ARN/name of the Secrets Manager secret holding
  *                          { "url": "...", "serviceKey": "...",
@@ -32,6 +35,7 @@ import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-sec
 import { SESv2Client, SendEmailCommand } from '@aws-sdk/client-sesv2';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { getTemplate } from './templates';
+import { pickTagline } from './templates/taglines';
 
 const FROM_EMAIL = process.env.FROM_EMAIL ?? 'Jobply <hello@jobply.ai>';
 const CONFIGURATION_SET_NAME = process.env.CONFIGURATION_SET_NAME ?? 'jobply-default';
@@ -150,7 +154,10 @@ async function processOne(supabase: SupabaseClient, jobId: string): Promise<void
 
   const unsubscribeSecret = await getUnsubscribeSecret();
   const unsubscribeUrl = buildUnsubscribeUrl(unsubscribeSecret, job.user_id, job.recipient_email);
-  const rendered = template.render({ ...(job.payload ?? {}), unsubscribeUrl });
+  // Deterministic per recipient/template/day — same person won't see the
+  // same header tagline twice in a row across different days, no DB state.
+  const tagline = pickTagline(`${job.recipient_email}:${job.template_key}:${new Date().toISOString().slice(0, 10)}`);
+  const rendered = template.render({ ...(job.payload ?? {}), unsubscribeUrl, tagline });
 
   try {
     const result = await ses.send(new SendEmailCommand({
