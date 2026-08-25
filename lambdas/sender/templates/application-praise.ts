@@ -4,6 +4,7 @@ export interface ApplicationPraisePayload {
   firstName?: string | null;
   applicationCount?: number | null;
   unsubscribeUrl: string;
+  tagline?: string;
 }
 
 export const applicationPraiseTemplate: EmailTemplate<ApplicationPraisePayload> = {
@@ -23,7 +24,7 @@ export const applicationPraiseTemplate: EmailTemplate<ApplicationPraisePayload> 
         working toward.
       </p>
       ${button('Find more jobs', 'https://jobply.ai/dashboard')}
-    `, payload.unsubscribeUrl);
+    `, payload.unsubscribeUrl, payload.tagline);
     const text = `Fantastic work, ${name} — you're making real progress!\n\nYou've already applied to ${count} ${jobWord} through Jobply. Every application is a step closer to your next opportunity. Most job seekers lose momentum early, but your consistency sets you apart. Stay focused, keep applying, and let every application bring you one step closer to the interview — and the offer — you've been working toward.\n\nFind more jobs: https://jobply.ai/dashboard`;
     return { subject: `You've applied to ${count} ${jobWord} — keep it up`, html, text };
   },

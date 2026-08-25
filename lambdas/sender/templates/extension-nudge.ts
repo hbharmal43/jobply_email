@@ -3,6 +3,7 @@ import { layout, button, type EmailTemplate } from './types';
 export interface ExtensionNudgePayload {
   firstName?: string | null;
   unsubscribeUrl: string;
+  tagline?: string;
 }
 
 export const extensionNudgeTemplate: EmailTemplate<ExtensionNudgePayload> = {
@@ -19,7 +20,7 @@ export const extensionNudgeTemplate: EmailTemplate<ExtensionNudgePayload> = {
         interviews.
       </p>
       ${button('Download the extension', 'https://chromewebstore.google.com/detail/clggbdcopoanbmfckeehnoodopjmfjjn?utm_source=item-share-cb')}
-    `, payload.unsubscribeUrl);
+    `, payload.unsubscribeUrl, payload.tagline);
     const text = `Why spend 15 minutes on every application, ${name}?\n\nInstall the Jobply Chrome Extension and let it do the repetitive work for you. Automatically fill applications across Workday, Greenhouse, Lever, and many more platforms in under 30 seconds. Spend less time filling forms and more time landing interviews.\n\nDownload the extension: https://chromewebstore.google.com/detail/clggbdcopoanbmfckeehnoodopjmfjjn?utm_source=item-share-cb`;
     return { subject: "You're missing the best part of Jobply", html, text };
   },

@@ -3,6 +3,7 @@ import { layout, button, type EmailTemplate } from './types';
 export interface NoApplicationsNudgePayload {
   firstName?: string | null;
   unsubscribeUrl: string;
+  tagline?: string;
 }
 
 const STEPS = [
@@ -42,7 +43,7 @@ export const noApplicationsNudgeTemplate: EmailTemplate<NoApplicationsNudgePaylo
         ${STEPS.map((s, i) => stepRow(i + 1, s.title, s.body, i === STEPS.length - 1)).join('')}
       </table>
       ${button('See your matches', 'https://jobply.ai/dashboard')}
-    `, payload.unsubscribeUrl);
+    `, payload.unsubscribeUrl, payload.tagline);
     const text = `You're all set, ${name} — your next opportunity is waiting\n\nYour profile is complete, and your Jobply extension is ready to go. The only thing left is to submit your first application. Every successful job search starts with a single click, and we've already found opportunities that match your profile. Take the first step today — you might be closer to your next interview than you think.\n\n${STEPS.map((s, i) => `${i + 1}. ${s.title} — ${s.body}`).join('\n')}\n\nSee your matches: https://jobply.ai/dashboard`;
     return { subject: 'Your first application is the hardest one to send', html, text };
   },
