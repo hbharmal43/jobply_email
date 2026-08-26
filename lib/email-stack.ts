@@ -61,9 +61,9 @@ export interface JobplyEmailStackProps extends cdk.StackProps {
  *                                                              ▼
  *                                                     Supabase (RPC)
  *
- * NOTE: the SES Configuration Set + its EventBridge event destination are
- * created in the SES console (they only need to exist once per environment).
- * This stack owns the Lambda and the EventBridge rule that consumes those events.
+ * NOTE: the SES Configuration Set is created outside this stack, while this
+ * stack owns its EventBridge event destination, the Lambda, and the EventBridge
+ * rule that consumes those events.
  *
  * Part B (SES) — outbound send pipeline.
  *
@@ -130,6 +130,10 @@ export class JobplyEmailStack extends cdk.Stack {
 
     supabaseSecret.grantRead(feedbackFn);
 
+    // The configuration set already exists outside CloudFormation. Manage the
+    // EventBridge destination here so SES events actually reach the rule below.
+    // Other destinations on the same configuration set (for example SNS) are
+    // independent and are left untouched.
     new ses.CfnConfigurationSetEventDestination(this, 'SesEventBridgeDestination', {
       configurationSetName,
       eventDestination: {

@@ -436,7 +436,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-491085388967-us-east-1",
-     "S3Key": "b41e4af8d2da672a632b188d4330dba75e174f8d73c09a91295a8eaf1d673f5d.zip"
+     "S3Key": "385b1ee87c2854134ccefb2be882641696aa91d9ea5e12dafb1b11a5c8260d86.zip"
     },
     "Description": "Scans for due lifecycle-email jobs and publishes them to SQS for the sender Lambda",
     "Environment": {
@@ -446,7 +446,7 @@
       "QUEUE_URL": {
        "Ref": "EmailSendQueueF54F995A"
       },
-      "PRODUCTION_MODE": "true",
+      "PRODUCTION_MODE": "false",
       "JOBPLY_TEST_USER_IDS": "",
       "ENABLED_JOURNEYS": "onboarding_abandoned,extension_nudge,application_milestone,extension_feedback",
       "CLAIM_BATCH_SIZE": "25",
@@ -472,7 +472,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "JobplyEmail-development/DispatcherFunction/Resource",
-    "aws:asset:path": "asset.b41e4af8d2da672a632b188d4330dba75e174f8d73c09a91295a8eaf1d673f5d",
+    "aws:asset:path": "asset.385b1ee87c2854134ccefb2be882641696aa91d9ea5e12dafb1b11a5c8260d86",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -509,7 +509,7 @@
     "Description": "Scans lifecycle journeys and drains due email jobs once a minute",
     "Name": "jobply-email-development-dispatch-schedule",
     "ScheduleExpression": "rate(1 minute)",
-    "State": "ENABLED",
+    "State": "DISABLED",
     "Targets": [
      {
       "Arn": {
@@ -639,7 +639,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-491085388967-us-east-1",
-     "S3Key": "b41e4af8d2da672a632b188d4330dba75e174f8d73c09a91295a8eaf1d673f5d.zip"
+     "S3Key": "385b1ee87c2854134ccefb2be882641696aa91d9ea5e12dafb1b11a5c8260d86.zip"
     },
     "Description": "Builds the daily personalized job-recommendation digest",
     "Environment": {
@@ -649,7 +649,7 @@
       "QUEUE_URL": {
        "Ref": "EmailSendQueueF54F995A"
       },
-      "PRODUCTION_MODE": "true",
+      "PRODUCTION_MODE": "false",
       "JOBPLY_TEST_USER_IDS": "",
       "ENABLED_JOURNEYS": "job_recommendations",
       "CLAIM_BATCH_SIZE": "25",
@@ -675,7 +675,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "JobplyEmail-development/RecommendationDispatcherFunction/Resource",
-    "aws:asset:path": "asset.b41e4af8d2da672a632b188d4330dba75e174f8d73c09a91295a8eaf1d673f5d",
+    "aws:asset:path": "asset.385b1ee87c2854134ccefb2be882641696aa91d9ea5e12dafb1b11a5c8260d86",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -781,7 +781,7 @@
     "Name": "jobply-email-development-daily-recommendations",
     "ScheduleExpression": "cron(0 9 * * ? *)",
     "ScheduleExpressionTimezone": "America/Chicago",
-    "State": "ENABLED",
+    "State": "DISABLED",
     "Target": {
      "Arn": {
       "Fn::GetAtt": [
@@ -907,7 +907,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-491085388967-us-east-1",
-     "S3Key": "daeefd8931bd88d83cc24b84b7ef5d9bf011b06364889fdaa79b49da0e62d5f6.zip"
+     "S3Key": "f9dcc88aa00657a1c80f4ed491eb18d743af8b2292adc96cd245ac16141c0ef4.zip"
     },
     "Description": "Renders and sends queued lifecycle emails through Amazon SES",
     "Environment": {
@@ -917,8 +917,8 @@
       "FROM_EMAIL": "Jobply <hello@jobply.ai>",
       "CONFIGURATION_SET_NAME": "jobply-default",
       "UNSUBSCRIBE_BASE_URL": "https://jobply.ai/email/unsubscribe",
-      "PRODUCTION_MODE": "true",
-      "TEST_RECIPIENTS": ""
+      "PRODUCTION_MODE": "false",
+      "TEST_RECIPIENTS": "hasnainbharmal4@gmail.com"
      }
     },
     "FunctionName": "jobply-email-development-sender",
@@ -940,7 +940,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "JobplyEmail-development/SenderFunction/Resource",
-    "aws:asset:path": "asset.daeefd8931bd88d83cc24b84b7ef5d9bf011b06364889fdaa79b49da0e62d5f6",
+    "aws:asset:path": "asset.f9dcc88aa00657a1c80f4ed491eb18d743af8b2292adc96cd245ac16141c0ef4",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -1048,7 +1048,7 @@
   "CDKMetadata": {
    "Type": "AWS::CDK::Metadata",
    "Properties": {
-    "Analytics": "v2:deflate64:H4sIAAAAAAAA/2VQyW4CMQz9Fu7GZakq9QhDe+o68wHIZDxDIJPQcQKqovx7lYC49PQW+T3ZXuDiaY6zCV1kqtrj1OgdxsaTOkLN4sKoGOgi22ho2LW0ta7lg+BHgddgldfOgqYBY+0MQ9XZgl/OaPWb5ZUlkOWWRNgLrjKALHEd1JH9moThWo+x6uy9NYd5HLRIVi9ntr4pG73T6aRtnwf+uwmM6wXfXF+zZ1uahAWrzlbOdroPI2WzYV/CGxavbbGAsyEY63A7JRhOID+C8TtwKF4hCUTtuQ2Gx1zc3AQo40J7Ia/2GFeGxiEnCkkJyt2Np/62+/3BVWc/gz8FnyD/Fw/ycF484vwZZ5ODaD0dg/V6YKyv+AfdshNbtQEAAA=="
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/2VQyW4CMQz9Fu7GZam4w5Seus58AAoZzxDIOHScgKoo/14lIC49vUV+T7YXuFjNcTZRV5nq9jS1Zo+x8UqfoCZxYdQE6iq7aNWwb9WOXUtHwY8Cr4G1N47BqAFj7SxB1XHBL2eN/s3yxhLIcqdEyAuuM4AscRP0ifxGCcGtHmPV8aM1h2kcjEhW2wuxb8pG7+p8Ntzngf9uAut6wTfX1+SJS5OQYNVx5bgzfRhVNhvyJfxC4g0XCygbgrEO91OCpQTyIxi/A4XiFZJA9IHaYGnMxc1dgLYutFfl9QHj2qpxyIlCUoJyd+NVf9/98eCq48/gz8EnyP/FozxdFs84X+FschRjpmNgbwbC+oZ/FLkGuLUBAAA="
    },
    "Metadata": {
     "aws:cdk:path": "JobplyEmail-development/CDKMetadata/Default"

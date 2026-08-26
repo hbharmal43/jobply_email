@@ -23,6 +23,9 @@
  *   CONFIGURATION_SET_NAME  SES configuration set (jobply-default)
  *   UNSUBSCRIBE_BASE_URL    Base URL for the unsubscribe page (default
  *                           https://jobply.ai/email/unsubscribe)
+ *   TEST_RECIPIENTS          Optional comma-separated recipient allowlist.
+ *                           When set, every other authorized job is failed
+ *                           permanently before rendering or contacting SES.
  *
  * Deps: @aws-sdk/client-secrets-manager, @aws-sdk/client-sesv2, @supabase/supabase-js
  */

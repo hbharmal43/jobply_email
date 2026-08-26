@@ -35,6 +35,10 @@ function positiveIntegerContext(key: string, fallback: number): number {
 
 const dispatcherScheduleEnabled =
   String(app.node.tryGetContext('enableDispatch') ?? 'false').toLowerCase() === 'true';
+
+// enableDispatch is the single mode switch. Production mode explicitly clears
+// the sender restriction; paused mode requires an allowlist and the dispatcher
+// exits before it can scan or claim any production jobs.
 const configuredTestRecipients = csvContext('testRecipients').map((email) => email.toLowerCase());
 const testRecipients = dispatcherScheduleEnabled ? [] : configuredTestRecipients;
 
