@@ -4,6 +4,7 @@ export interface ExtensionFeedbackPayload {
   firstName?: string | null;
   unsubscribeUrl: string;
   tagline?: string;
+  preheader?: string;
 }
 
 /**
@@ -31,7 +32,7 @@ export const extensionFeedbackTemplate: EmailTemplate<ExtensionFeedbackPayload> 
         helps us improve Jobply and build features that make job searching easier for everyone.
       </p>
       ${button('Share your feedback', feedbackUrl)}
-    `, payload.unsubscribeUrl, payload.tagline);
+    `, payload.unsubscribeUrl, payload.tagline, payload.preheader);
     const text = `How's your Jobply experience so far, ${name}?\n\nYou've been using the extension for a little while now, and we'd love to hear your thoughts. What's helping you save time? What's not working as expected? Your feedback helps us improve Jobply and build features that make job searching easier for everyone.\n\nShare your feedback: ${feedbackUrl}`;
     return { subject: 'Got 2 minutes? Quick question for you', html, text };
   },

@@ -4,6 +4,7 @@ export interface WelcomePayload {
   firstName?: string | null;
   unsubscribeUrl: string;
   tagline?: string;
+  preheader?: string;
 }
 
 const STEPS = [
@@ -48,7 +49,7 @@ export const welcomeTemplate: EmailTemplate<WelcomePayload> = {
       <div style="text-align:center;">
         ${button('Set up my profile', 'https://jobply.ai/onboarding')}
       </div>
-    `, payload.unsubscribeUrl, payload.tagline);
+    `, payload.unsubscribeUrl, payload.tagline, payload.preheader);
     const text = `Welcome to Jobply, ${name}!\n\nYou're just a few minutes away from completing your profile. Once it's set up, we'll start finding and matching you with opportunities that align with your skills and career goals.\n\n${STEPS.map((s, i) => `${i + 1}. ${s.title} — ${s.body}`).join('\n')}\n\nSet up my profile: https://jobply.ai/onboarding`;
     return { subject: 'Welcome to Jobply', html, text };
   },

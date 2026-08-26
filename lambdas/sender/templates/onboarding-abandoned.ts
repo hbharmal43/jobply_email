@@ -4,6 +4,7 @@ export interface OnboardingAbandonedPayload {
   firstName?: string | null;
   unsubscribeUrl: string;
   tagline?: string;
+  preheader?: string;
 }
 
 const PERKS = [
@@ -42,7 +43,7 @@ export const onboardingAbandonedTemplate: EmailTemplate<OnboardingAbandonedPaylo
         ${PERKS.map((p, i) => perkRow(p.title, p.body, i === PERKS.length - 1)).join('')}
       </table>
       ${button('Finish where I left off', 'https://jobply.ai/onboarding')}
-    `, payload.unsubscribeUrl, payload.tagline);
+    `, payload.unsubscribeUrl, payload.tagline, payload.preheader);
     const text = `You left your profile half-finished, ${name}\n\nLooks like you got pulled away before finishing your Jobply setup. Pick up right where you left off:\n\n${PERKS.map(p => `- ${p.title} — ${p.body}`).join('\n')}\n\nhttps://jobply.ai/onboarding`;
     return { subject: "You were this close, don't lose your progress", html, text };
   },

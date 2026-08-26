@@ -6,6 +6,7 @@ export interface ReplyStatusPayload {
   jobTitle?: string | null;
   unsubscribeUrl: string;
   tagline?: string;
+  preheader?: string;
 }
 
 /**
@@ -76,7 +77,7 @@ export const replyStatusTemplate: EmailTemplate<ReplyStatusPayload> = {
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
         ${steps.map((s, i) => statusStepRow(i + 1, s.title, s.body, i === steps.length - 1)).join('')}
       </table>
-    `, payload.unsubscribeUrl, payload.tagline);
+    `, payload.unsubscribeUrl, payload.tagline, payload.preheader);
 
     const stepsText = steps.map((s, i) => `${i + 1}. ${s.title}: ${s.body}`).join('\n');
     const text = `Hey ${name}, any word from ${company}?\n\nYou applied to ${company}${role ? ` for the ${role} role` : ''} through Jobply a little while back. We'd love a quick update.\n\nYes, I heard back: ${yesUrl}\nNot yet: ${noUrl}\n\nHeard back? Update your application status too, so your dashboard stays accurate:\n${stepsText}`;

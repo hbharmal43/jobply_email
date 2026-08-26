@@ -15,8 +15,8 @@
  * /email/unsubscribe route can verify it without a database round trip
  * before mutating email_preferences.
  *
- * Also picks a rotating header tagline (see ./templates/taglines) and
- * threads it into the payload the same way.
+ * Also picks a rotating header tagline and inbox-preview preheader (see
+ * ./templates/taglines) and threads both into the payload the same way.
  *
  * Env vars:
  *   SUPABASE_SECRET_ID     ARN/name of the Secrets Manager secret holding
@@ -139,8 +139,11 @@ async function processOne(supabase: SupabaseClient, jobId: string): Promise<void
   const unsubscribeUrl = buildUnsubscribeUrl(unsubscribeSecret, job.user_id, job.recipient_email);
   // Deterministic per recipient/template/day — same person won't see the
   // same header tagline twice in a row across different days, no DB state.
-  const tagline = pickTagline(`${job.recipient_email}:${job.template_key}:${new Date().toISOString().slice(0, 10)}`);
-  const rendered = template.render({ ...(job.payload ?? {}), unsubscribeUrl, tagline });
+  const seedBase = `${job.recipient_email}:${job.template_key}:${new Date().toISOString().slice(0, 10)}`;
+  const tagline = pickTagline(seedBase);
+  // Separate seed so the inbox-preview snippet doesn't just repeat the header tagline.
+  const preheader = pickTagline(`${seedBase}:preheader`);
+  const rendered = template.render({ ...(job.payload ?? {}), unsubscribeUrl, tagline, preheader });
 
   try {
     const toAddresses = TEST_RECIPIENTS ?? [job.recipient_email];

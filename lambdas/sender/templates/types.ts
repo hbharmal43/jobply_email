@@ -33,10 +33,11 @@ function escapeTypographicChars(html: string): string {
  * unsubscribeUrl is optional: account_deleted (and any future one-off
  * transactional confirmation with no account left to manage or unsubscribe
  * from) omits it, which drops both footer links down to a bare wordmark.
- * tagline is optional too, for the same reason: account_deleted's tone
- * doesn't fit a rotating catchy line (see pickTagline in ./taglines).
+ * tagline and preheader are optional too, for the same reason:
+ * account_deleted's tone doesn't fit a rotating catchy line (see
+ * pickTagline in ./taglines).
  */
-export function layout(bodyHtml: string, unsubscribeUrl?: string, tagline?: string): string {
+export function layout(bodyHtml: string, unsubscribeUrl?: string, tagline?: string, preheader?: string): string {
   const footer = unsubscribeUrl
     ? `
           <p style="margin:0;font-size:12px;color:#A3A3A3;">
@@ -55,6 +56,14 @@ export function layout(bodyHtml: string, unsubscribeUrl?: string, tagline?: stri
     <html>
     <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
     <body style="margin:0;padding:0;background:#F5F5F5;font-family:sans-serif;">
+      ${preheader ? `
+      <div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:#F5F5F5;opacity:0;">
+        ${preheader}
+      </div>
+      <div style="display:none;max-height:0;overflow:hidden;">
+        ${'&nbsp;&zwnj;'.repeat(60)}
+      </div>
+      ` : ''}
       <div style="max-width:600px;margin:32px auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
         <div style="background:#ffde59;padding:20px 28px;">
           <img src="https://jobply.ai/logo.png" alt="Jobply" width="66" height="28" style="display:block;height:28px;width:66px;border:0;">
