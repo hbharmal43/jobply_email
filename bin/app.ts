@@ -47,10 +47,6 @@ if (!dispatcherScheduleEnabled && testRecipients.length === 0) {
 }
 
 const enabledJourneys = csvContext('enabledJourneys');
-if (enabledJourneys.length === 0) {
-  throw new Error('enabledJourneys must contain at least one dispatcher journey');
-}
-
 const knownJourneys = new Set([
   'onboarding_abandoned',
   'extension_nudge',
@@ -59,20 +55,24 @@ const knownJourneys = new Set([
   'job_recommendations',
 ]);
 const unknownJourneys = enabledJourneys.filter((journey) => !knownJourneys.has(journey));
-if (unknownJourneys.length > 0) {
-  throw new Error(`Unknown enabledJourneys values: ${unknownJourneys.join(', ')}`);
+if (enabledJourneys.length === 0 || unknownJourneys.length > 0) {
+  throw new Error(
+    enabledJourneys.length === 0
+      ? 'enabledJourneys must contain at least one dispatcher journey'
+      : `Unknown enabledJourneys values: ${unknownJourneys.join(', ')}`,
+  );
 }
-
-const claimBatchSize = positiveIntegerContext('claimBatchSize', 25);
-const scanBatchSize = positiveIntegerContext('scanBatchSize', 100);
 
 new JobplyEmailStack(app, `JobplyEmail-${environmentName}`, {
   environmentName,
   emailEnvironment,
   testRecipients,
   enabledJourneys,
-  claimBatchSize,
-  scanBatchSize,
+  claimBatchSize: positiveIntegerContext('claimBatchSize', 25),
+  scanBatchSize: positiveIntegerContext('scanBatchSize', 100),
+  recommendationScanBatchSize: positiveIntegerContext('recommendationScanBatchSize', 500),
+  recommendationScheduleTimezone:
+    String(app.node.tryGetContext('recommendationScheduleTimezone') ?? 'America/Chicago'),
   dispatcherScheduleEnabled,
   supabaseSecretName: `jobply-email/${environmentName}/supabase`,
   env: {

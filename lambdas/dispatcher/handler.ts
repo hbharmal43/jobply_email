@@ -1,10 +1,11 @@
 /**
  * Dispatcher Lambda — Part B (SES)
  *
- * Runs once a minute on an EventBridge Scheduler rate(1 minute) rule. Two jobs:
+ * Shared by two scheduled Lambdas: lifecycle scans run once a minute, while
+ * job recommendations run daily at 9:00 AM America/Chicago. Two jobs:
  *
  *  1. Scan `profiles` (joined to `applications` for two of them) for the
- *     four time/milestone-based journeys and enqueue any newly due jobs
+ *     the enabled time/milestone-based journeys and enqueue newly due jobs
  *     (idempotent via schedule_email_job's dedupe_key conflict):
  *       - onboarding_abandoned    24h after onboarding started, still incomplete
  *       - extension_nudge         3 days after onboarding completed, extension not installed
@@ -82,7 +83,7 @@ async function getSupabase(): Promise<SupabaseClient> {
 const sqs = new SQSClient({});
 
 interface CandidateProfile {
-  id: string;
+  user_id: string;
   email: string;
   first_name: string | null;
 }
@@ -90,34 +91,31 @@ interface CandidateProfile {
 async function scanOnboardingAbandoned(supabase: SupabaseClient): Promise<number> {
   const cutoff = new Date(Date.now() - ONBOARDING_ABANDONED_DELAY_HOURS * 60 * 60 * 1000).toISOString();
 
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, email, first_name')
-    .not('onboarding_started_at', 'is', null)
-    .eq('onboarding_completed', false)
-    .lt('onboarding_started_at', cutoff)
-    .not('email', 'is', null)
-    .limit(SCAN_BATCH_SIZE);
+  const { data, error } = await supabase.rpc('get_onboarding_abandoned_candidates', {
+    p_cutoff: cutoff,
+    p_environment: ENVIRONMENT,
+    p_limit: SCAN_BATCH_SIZE,
+  });
 
   if (error) {
-    console.error('scanOnboardingAbandoned query failed', error);
+    console.error('get_onboarding_abandoned_candidates failed', error);
     return 0;
   }
 
   let enqueued = 0;
   for (const profile of (data ?? []) as CandidateProfile[]) {
     const { data: jobId, error: rpcError } = await supabase.rpc('schedule_email_job', {
-      p_user_id: profile.id,
+      p_user_id: profile.user_id,
       p_recipient_email: profile.email,
       p_journey_key: 'onboarding_abandoned',
       p_template_key: 'onboarding_abandoned',
-      p_dedupe_key: `onboarding_abandoned:${profile.id}`,
+      p_dedupe_key: `onboarding_abandoned:${profile.user_id}`,
       p_category: 'lifecycle',
       p_payload: { firstName: profile.first_name },
       p_environment: ENVIRONMENT,
     });
     if (rpcError) {
-      console.error('schedule_email_job (onboarding_abandoned) failed', { userId: profile.id, error: rpcError });
+      console.error('schedule_email_job (onboarding_abandoned) failed', { userId: profile.user_id, error: rpcError });
       continue;
     }
     if (jobId) enqueued++;
@@ -128,35 +126,31 @@ async function scanOnboardingAbandoned(supabase: SupabaseClient): Promise<number
 async function scanExtensionNudge(supabase: SupabaseClient): Promise<number> {
   const cutoff = new Date(Date.now() - EXTENSION_NUDGE_DELAY_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, email, first_name')
-    .eq('onboarding_completed', true)
-    .is('extension_installed_at', null)
-    .not('onboarding_completed_at', 'is', null)
-    .lt('onboarding_completed_at', cutoff)
-    .not('email', 'is', null)
-    .limit(SCAN_BATCH_SIZE);
+  const { data, error } = await supabase.rpc('get_extension_nudge_candidates', {
+    p_cutoff: cutoff,
+    p_environment: ENVIRONMENT,
+    p_limit: SCAN_BATCH_SIZE,
+  });
 
   if (error) {
-    console.error('scanExtensionNudge query failed', error);
+    console.error('get_extension_nudge_candidates failed', error);
     return 0;
   }
 
   let enqueued = 0;
   for (const profile of (data ?? []) as CandidateProfile[]) {
     const { data: jobId, error: rpcError } = await supabase.rpc('schedule_email_job', {
-      p_user_id: profile.id,
+      p_user_id: profile.user_id,
       p_recipient_email: profile.email,
       p_journey_key: 'extension_nudge',
       p_template_key: 'extension_nudge',
-      p_dedupe_key: `extension_nudge:${profile.id}`,
+      p_dedupe_key: `extension_nudge:${profile.user_id}`,
       p_category: 'lifecycle',
       p_payload: { firstName: profile.first_name },
       p_environment: ENVIRONMENT,
     });
     if (rpcError) {
-      console.error('schedule_email_job (extension_nudge) failed', { userId: profile.id, error: rpcError });
+      console.error('schedule_email_job (extension_nudge) failed', { userId: profile.user_id, error: rpcError });
       continue;
     }
     if (jobId) enqueued++;
@@ -176,6 +170,7 @@ async function scanApplicationMilestone(supabase: SupabaseClient): Promise<numbe
 
   const { data, error } = await supabase.rpc('get_application_milestone_candidates', {
     p_cutoff: cutoff,
+    p_environment: ENVIRONMENT,
     p_limit: SCAN_BATCH_SIZE,
   });
 
@@ -215,6 +210,7 @@ interface ExtensionFeedbackCandidate {
 async function scanExtensionFeedback(supabase: SupabaseClient): Promise<number> {
   const { data, error } = await supabase.rpc('get_extension_feedback_candidates', {
     p_threshold: EXTENSION_FEEDBACK_THRESHOLD,
+    p_environment: ENVIRONMENT,
     p_limit: SCAN_BATCH_SIZE,
   });
 
@@ -257,6 +253,7 @@ const TEST_USER_IDS_ENV = process.env.JOBPLY_TEST_USER_IDS;
 
 async function scanJobRecommendations(supabase: SupabaseClient): Promise<number> {
   let candidates: JobRecommendationCandidate[] = [];
+  const todayStr = new Date().toISOString().split('T')[0];
 
   const testUserIds = TEST_USER_IDS_ENV
     ? TEST_USER_IDS_ENV.split(',').map((id) => id.trim()).filter((id) => id.length > 0)
@@ -282,6 +279,8 @@ async function scanJobRecommendations(supabase: SupabaseClient): Promise<number>
     }));
   } else {
     const { data, error } = await supabase.rpc('get_job_recommendation_candidates', {
+      p_environment: ENVIRONMENT,
+      p_scan_key: todayStr,
       p_limit: SCAN_BATCH_SIZE,
     });
 
@@ -292,7 +291,6 @@ async function scanJobRecommendations(supabase: SupabaseClient): Promise<number>
     candidates = (data ?? []) as JobRecommendationCandidate[];
   }
 
-  const todayStr = new Date().toISOString().split('T')[0];
   let enqueued = 0;
 
   for (const candidate of candidates) {
@@ -308,6 +306,15 @@ async function scanJobRecommendations(supabase: SupabaseClient): Promise<number>
     }
 
     if (!jobs || !Array.isArray(jobs) || jobs.length === 0) {
+      const { error: markError } = await supabase.rpc('mark_email_candidate_scanned', {
+        p_environment: ENVIRONMENT,
+        p_journey_key: 'job_recommendations',
+        p_user_id: candidate.user_id,
+        p_scan_key: todayStr,
+      });
+      if (markError) {
+        console.error('mark_email_candidate_scanned failed', { userId: candidate.user_id, error: markError });
+      }
       continue;
     }
 
@@ -329,6 +336,15 @@ async function scanJobRecommendations(supabase: SupabaseClient): Promise<number>
     if (rpcError) {
       console.error('schedule_email_job (job_recommendations) failed', { userId: candidate.user_id, error: rpcError });
       continue;
+    }
+    const { error: markError } = await supabase.rpc('mark_email_candidate_scanned', {
+      p_environment: ENVIRONMENT,
+      p_journey_key: 'job_recommendations',
+      p_user_id: candidate.user_id,
+      p_scan_key: todayStr,
+    });
+    if (markError) {
+      console.error('mark_email_candidate_scanned failed', { userId: candidate.user_id, error: markError });
     }
     if (jobId) enqueued++;
   }
