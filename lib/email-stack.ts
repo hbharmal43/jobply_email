@@ -124,7 +124,9 @@ export class JobplyEmailStack extends cdk.Stack {
       bundling: {
         minify: true,
         sourceMap: true,
-        externalModules: ['@aws-sdk/*'],
+        // pg-native is an optional peer of pg that is never installed;
+        // leaving it external stops esbuild failing to resolve it.
+        externalModules: ['@aws-sdk/*', 'pg-native'],
       },
     });
 
@@ -206,7 +208,9 @@ export class JobplyEmailStack extends cdk.Stack {
       bundling: {
         minify: true,
         sourceMap: true,
-        externalModules: ['@aws-sdk/*'],
+        // pg-native is an optional peer of pg that is never installed;
+        // leaving it external stops esbuild failing to resolve it.
+        externalModules: ['@aws-sdk/*', 'pg-native'],
       },
     });
 
@@ -247,7 +251,9 @@ export class JobplyEmailStack extends cdk.Stack {
       bundling: {
         minify: true,
         sourceMap: true,
-        externalModules: ['@aws-sdk/*'],
+        // pg-native is an optional peer of pg that is never installed;
+        // leaving it external stops esbuild failing to resolve it.
+        externalModules: ['@aws-sdk/*', 'pg-native'],
       },
     });
 
@@ -304,7 +310,9 @@ export class JobplyEmailStack extends cdk.Stack {
       bundling: {
         minify: true,
         sourceMap: true,
-        externalModules: ['@aws-sdk/*'],
+        // pg-native is an optional peer of pg that is never installed;
+        // leaving it external stops esbuild failing to resolve it.
+        externalModules: ['@aws-sdk/*', 'pg-native'],
       },
     });
 
