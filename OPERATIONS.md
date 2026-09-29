@@ -18,6 +18,31 @@ SQS contains the active delivery buffer, not every future email. Future and
 deduplicated jobs live in Supabase `email_internal.email_jobs`; each dispatcher
 run moves the next due batch into SQS.
 
+## Data sources
+
+Job listings live on AWS RDS, not Supabase. The recommendation scan therefore
+spans two databases:
+
+- **Supabase** — candidate profiles, `user_embeddings`, `profiles.years_of_experience`,
+  and all of `email_internal`. Reached over PostgREST with the service role key.
+- **AWS RDS** — `recommend_jobs_aws` and `scraped_jobs`. Reached over the
+  Postgres wire protocol with `pg`.
+
+`recommend_jobs_aws` does not look the user's vector up itself — unlike the
+Supabase `recommend_jobs_for_user_v3` it replaced — so the dispatcher reads each
+embedding from Supabase and passes it in. Embeddings and years-of-experience are
+batched in chunks of 50 before the per-user loop.
+
+The RDS connection URL is the `awsRdsUrl` field on the existing
+`jobply-email/<env>/supabase` secret. It is only required when
+`job_recommendations` is in `enabledJourneys`; the lifecycle dispatcher never
+opens a Postgres connection. RDS is reachable over the public internet, so
+neither Lambda needs a VPC attachment.
+
+If the RDS query fails for a user, that user is skipped and retried on the next
+run — there is deliberately no fallback to the Supabase matcher, whose job
+tables are now stale.
+
 Candidate scans are bounded by `scanBatchSize`, but they do not restart from
 the same first page. Candidate RPCs exclude users whose deduplicated job already
 exists, so later runs advance through the remaining population. Recommendation
