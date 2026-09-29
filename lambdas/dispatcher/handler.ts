@@ -1,77 +1,37 @@
 /**
- * Dispatcher Lambda — Part B (SES)
+ * Recommendation dispatcher Lambda
  *
- * Shared by two scheduled Lambdas: lifecycle scans run once a minute, while
- * job recommendations run daily at 9:00 AM America/Chicago. Two jobs:
+ * Runs daily (EventBridge Scheduler, America/Chicago). For each eligible user
+ * it picks their top job matches and records them as a deduplicated
+ * `job_recommendations` email job (one per user per UTC day).
  *
- *  1. Scan `profiles` (joined to `applications` for two of them) for the
- *     the enabled time/milestone-based journeys and enqueue newly due jobs
- *     (idempotent via schedule_email_job's dedupe_key conflict):
- *       - onboarding_abandoned    24h after onboarding started, still incomplete
- *       - extension_nudge         3 days after onboarding completed, extension not installed
- *       - application_milestone   3 days after onboarding completed — praises
- *                                 progress or nudges a first application depending
- *                                 on application count at that moment
- *       - extension_feedback      once application count reaches the feedback threshold
- *     'welcome' jobs are NOT created here — they're enqueued synchronously by
- *     jobply_website's /api/auth/post-login route.
- *  2. Claim due email_jobs (lease-based, safe under overlapping runs) and
- *     publish one lightweight SQS message per job for the sender Lambda.
+ * Job listings live on AWS RDS rather than Supabase, so the scan spans two
+ * databases: candidate profiles and user embeddings come from Supabase, and
+ * the matching itself runs on RDS via `recommend_jobs_aws`. See ./aws-rds.ts.
  *
- * Job listings live on AWS RDS rather than Supabase, so the recommendations
- * scan spans two databases: candidate profiles and user embeddings come from
- * Supabase, and the matching itself runs on RDS via `recommend_jobs_aws`.
- * See ./aws-rds.ts.
+ * Delivery is moving to Customer.io (the SES/SQS sender was removed on
+ * 2026-09-29); the scheduled job row is the per-day dedupe record.
  *
  * Env vars:
  *   SUPABASE_SECRET_ID   ARN/name of the Secrets Manager secret holding
  *                        { "url": "...", "serviceKey": "...", "awsRdsUrl": "..." }
- *                        awsRdsUrl is only required for job_recommendations.
- *   QUEUE_URL             SQS queue URL the sender Lambda consumes
  *   ENVIRONMENT           'production' | 'staging' | 'development' (default production)
- *   CLAIM_BATCH_SIZE      max jobs claimed per run (default 50)
- *   SCAN_BATCH_SIZE       max profiles scanned per journey per run (default 100)
+ *   PRODUCTION_MODE       'true' to scan; anything else exits immediately
+ *   SCAN_BATCH_SIZE       max candidates scanned per run (default 500)
+ *   JOBPLY_TEST_USER_IDS  optional comma-separated user ids to scan instead of
+ *                         the real candidate list
  *   AWS_RDS_JOBS_TABLE    jobs table on RDS (default scraped_jobs)
  *
- * Deps: @aws-sdk/client-secrets-manager, @aws-sdk/client-sqs, @supabase/supabase-js, pg
+ * Deps: @aws-sdk/client-secrets-manager, @supabase/supabase-js, pg
  */
 
-import { randomUUID } from 'node:crypto';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
-import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { getRdsPool, recommendJobsFromAws, type RecommendedJobRow } from './aws-rds';
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? 'production';
 const PRODUCTION_MODE = process.env.PRODUCTION_MODE === 'true';
-const CLAIM_BATCH_SIZE = Number(process.env.CLAIM_BATCH_SIZE ?? 50);
-const SCAN_BATCH_SIZE = Number(process.env.SCAN_BATCH_SIZE ?? 100);
-
-const SCANNED_JOURNEYS = [
-  'onboarding_abandoned',
-  'extension_nudge',
-  'application_milestone',
-  'extension_feedback',
-  'job_recommendations',
-] as const;
-
-type ScannedJourney = (typeof SCANNED_JOURNEYS)[number];
-
-const ENABLED_JOURNEYS = new Set(
-  (process.env.ENABLED_JOURNEYS || SCANNED_JOURNEYS.join(','))
-    .split(',')
-    .map((journey) => journey.trim())
-    .filter(Boolean),
-);
-
-function scanIfEnabled(journey: ScannedJourney, scan: () => Promise<number>): Promise<number> {
-  return ENABLED_JOURNEYS.has(journey) ? scan() : Promise.resolve(0);
-}
-
-const ONBOARDING_ABANDONED_DELAY_HOURS = 24;
-const EXTENSION_NUDGE_DELAY_DAYS = 3;
-const APPLICATION_MILESTONE_DELAY_DAYS = 3;
-const EXTENSION_FEEDBACK_THRESHOLD = 5;
+const SCAN_BATCH_SIZE = Number(process.env.SCAN_BATCH_SIZE ?? 500);
 
 interface DispatcherSecret {
   url: string;
@@ -104,178 +64,10 @@ async function getSupabase(): Promise<SupabaseClient> {
   return cachedClient;
 }
 
-/**
- * Only the job_recommendations scan needs RDS, so this is resolved lazily —
- * the lifecycle dispatcher never opens a Postgres connection.
- */
 async function getJobsPool() {
   const { awsRdsUrl } = await loadSecret();
-  if (!awsRdsUrl) {
-    throw new Error(
-      'Supabase secret missing awsRdsUrl — required for the job_recommendations journey',
-    );
-  }
+  if (!awsRdsUrl) throw new Error('Supabase secret missing awsRdsUrl');
   return getRdsPool(awsRdsUrl);
-}
-
-const sqs = new SQSClient({});
-
-interface CandidateProfile {
-  user_id: string;
-  email: string;
-  first_name: string | null;
-}
-
-async function scanOnboardingAbandoned(supabase: SupabaseClient): Promise<number> {
-  const cutoff = new Date(Date.now() - ONBOARDING_ABANDONED_DELAY_HOURS * 60 * 60 * 1000).toISOString();
-
-  const { data, error } = await supabase.rpc('get_onboarding_abandoned_candidates', {
-    p_cutoff: cutoff,
-    p_environment: ENVIRONMENT,
-    p_limit: SCAN_BATCH_SIZE,
-  });
-
-  if (error) {
-    console.error('get_onboarding_abandoned_candidates failed', error);
-    return 0;
-  }
-
-  let enqueued = 0;
-  for (const profile of (data ?? []) as CandidateProfile[]) {
-    const { data: jobId, error: rpcError } = await supabase.rpc('schedule_email_job', {
-      p_user_id: profile.user_id,
-      p_recipient_email: profile.email,
-      p_journey_key: 'onboarding_abandoned',
-      p_template_key: 'onboarding_abandoned',
-      p_dedupe_key: `onboarding_abandoned:${profile.user_id}`,
-      p_category: 'lifecycle',
-      p_payload: { firstName: profile.first_name },
-      p_environment: ENVIRONMENT,
-    });
-    if (rpcError) {
-      console.error('schedule_email_job (onboarding_abandoned) failed', { userId: profile.user_id, error: rpcError });
-      continue;
-    }
-    if (jobId) enqueued++;
-  }
-  return enqueued;
-}
-
-async function scanExtensionNudge(supabase: SupabaseClient): Promise<number> {
-  const cutoff = new Date(Date.now() - EXTENSION_NUDGE_DELAY_DAYS * 24 * 60 * 60 * 1000).toISOString();
-
-  const { data, error } = await supabase.rpc('get_extension_nudge_candidates', {
-    p_cutoff: cutoff,
-    p_environment: ENVIRONMENT,
-    p_limit: SCAN_BATCH_SIZE,
-  });
-
-  if (error) {
-    console.error('get_extension_nudge_candidates failed', error);
-    return 0;
-  }
-
-  let enqueued = 0;
-  for (const profile of (data ?? []) as CandidateProfile[]) {
-    const { data: jobId, error: rpcError } = await supabase.rpc('schedule_email_job', {
-      p_user_id: profile.user_id,
-      p_recipient_email: profile.email,
-      p_journey_key: 'extension_nudge',
-      p_template_key: 'extension_nudge',
-      p_dedupe_key: `extension_nudge:${profile.user_id}`,
-      p_category: 'lifecycle',
-      p_payload: { firstName: profile.first_name },
-      p_environment: ENVIRONMENT,
-    });
-    if (rpcError) {
-      console.error('schedule_email_job (extension_nudge) failed', { userId: profile.user_id, error: rpcError });
-      continue;
-    }
-    if (jobId) enqueued++;
-  }
-  return enqueued;
-}
-
-interface ApplicationMilestoneCandidate {
-  user_id: string;
-  email: string;
-  first_name: string | null;
-  application_count: number;
-}
-
-async function scanApplicationMilestone(supabase: SupabaseClient): Promise<number> {
-  const cutoff = new Date(Date.now() - APPLICATION_MILESTONE_DELAY_DAYS * 24 * 60 * 60 * 1000).toISOString();
-
-  const { data, error } = await supabase.rpc('get_application_milestone_candidates', {
-    p_cutoff: cutoff,
-    p_environment: ENVIRONMENT,
-    p_limit: SCAN_BATCH_SIZE,
-  });
-
-  if (error) {
-    console.error('get_application_milestone_candidates failed', error);
-    return 0;
-  }
-
-  let enqueued = 0;
-  for (const candidate of (data ?? []) as ApplicationMilestoneCandidate[]) {
-    const templateKey = candidate.application_count > 0 ? 'application_praise' : 'no_applications_nudge';
-    const { data: jobId, error: rpcError } = await supabase.rpc('schedule_email_job', {
-      p_user_id: candidate.user_id,
-      p_recipient_email: candidate.email,
-      p_journey_key: 'application_milestone',
-      p_template_key: templateKey,
-      p_dedupe_key: `application_milestone:${candidate.user_id}`,
-      p_category: 'lifecycle',
-      p_payload: { firstName: candidate.first_name, applicationCount: candidate.application_count },
-      p_environment: ENVIRONMENT,
-    });
-    if (rpcError) {
-      console.error('schedule_email_job (application_milestone) failed', { userId: candidate.user_id, error: rpcError });
-      continue;
-    }
-    if (jobId) enqueued++;
-  }
-  return enqueued;
-}
-
-interface ExtensionFeedbackCandidate {
-  user_id: string;
-  email: string;
-  first_name: string | null;
-}
-
-async function scanExtensionFeedback(supabase: SupabaseClient): Promise<number> {
-  const { data, error } = await supabase.rpc('get_extension_feedback_candidates', {
-    p_threshold: EXTENSION_FEEDBACK_THRESHOLD,
-    p_environment: ENVIRONMENT,
-    p_limit: SCAN_BATCH_SIZE,
-  });
-
-  if (error) {
-    console.error('get_extension_feedback_candidates failed', error);
-    return 0;
-  }
-
-  let enqueued = 0;
-  for (const candidate of (data ?? []) as ExtensionFeedbackCandidate[]) {
-    const { data: jobId, error: rpcError } = await supabase.rpc('schedule_email_job', {
-      p_user_id: candidate.user_id,
-      p_recipient_email: candidate.email,
-      p_journey_key: 'extension_feedback',
-      p_template_key: 'extension_feedback',
-      p_dedupe_key: `extension_feedback:${candidate.user_id}`,
-      p_category: 'lifecycle',
-      p_payload: { firstName: candidate.first_name },
-      p_environment: ENVIRONMENT,
-    });
-    if (rpcError) {
-      console.error('schedule_email_job (extension_feedback) failed', { userId: candidate.user_id, error: rpcError });
-      continue;
-    }
-    if (jobId) enqueued++;
-  }
-  return enqueued;
 }
 
 interface JobRecommendationCandidate {
@@ -489,52 +281,6 @@ async function scanJobRecommendations(supabase: SupabaseClient): Promise<number>
   return enqueued;
 }
 
-async function claimAndEnqueue(supabase: SupabaseClient): Promise<{ claimed: number; queued: number }> {
-  const queueUrl = process.env.QUEUE_URL;
-  if (!queueUrl) throw new Error('QUEUE_URL not set');
-
-  const workerId = `dispatcher-${randomUUID()}`;
-  const { data: jobs, error } = await supabase.rpc('claim_due_email_jobs', {
-    p_worker_id: workerId,
-    p_limit: CLAIM_BATCH_SIZE,
-    p_environment: ENVIRONMENT,
-  });
-
-  if (error) {
-    console.error('claim_due_email_jobs failed', error);
-    return { claimed: 0, queued: 0 };
-  }
-
-  const claimedJobs = (jobs ?? []) as { id: string }[];
-  let queued = 0;
-
-  // Bounded sequential publish — at v1 volume this is a handful of messages
-  // per minute, not worth the complexity of a concurrency pool.
-  for (const job of claimedJobs) {
-    try {
-      const send = await sqs.send(new SendMessageCommand({
-        QueueUrl: queueUrl,
-        MessageBody: JSON.stringify({ email_job_id: job.id, environment: ENVIRONMENT }),
-      }));
-      const { error: markError } = await supabase.rpc('mark_email_job_queued', {
-        p_job_id: job.id,
-        p_sqs_message_id: send.MessageId ?? null,
-      });
-      if (markError) {
-        console.error('mark_email_job_queued failed', { jobId: job.id, error: markError });
-        continue;
-      }
-      queued++;
-    } catch (sqsError) {
-      // Job stays 'dispatching' — its lease will expire and a future run
-      // will reclaim it (see claim_due_email_jobs' expired-lease clause).
-      console.error('SQS send failed, leaving job for lease expiry', { jobId: job.id, error: sqsError });
-    }
-  }
-
-  return { claimed: claimedJobs.length, queued };
-}
-
 interface LambdaContext {
   callbackWaitsForEmptyEventLoop?: boolean;
 }
@@ -546,38 +292,15 @@ export async function handler(_event?: unknown, context?: LambdaContext): Promis
   if (context) context.callbackWaitsForEmptyEventLoop = false;
 
   if (!PRODUCTION_MODE) {
-    console.log('dispatcher paused; no profiles scanned and no jobs claimed');
+    console.log('dispatcher paused; no profiles scanned');
     return;
   }
 
   const supabase = await getSupabase();
-
-  const [
-    onboardingEnqueued,
-    extensionEnqueued,
-    applicationMilestoneEnqueued,
-    extensionFeedbackEnqueued,
-    jobRecommendationsEnqueued,
-  ] = await Promise.all([
-    scanIfEnabled('onboarding_abandoned', () => scanOnboardingAbandoned(supabase)),
-    scanIfEnabled('extension_nudge', () => scanExtensionNudge(supabase)),
-    scanIfEnabled('application_milestone', () => scanApplicationMilestone(supabase)),
-    scanIfEnabled('extension_feedback', () => scanExtensionFeedback(supabase)),
-    scanIfEnabled('job_recommendations', () => scanJobRecommendations(supabase)),
-  ]);
-
-  const { claimed, queued } = await claimAndEnqueue(supabase);
+  const jobRecommendationsEnqueued = await scanJobRecommendations(supabase);
 
   console.log('dispatcher run complete', {
     environment: ENVIRONMENT,
-    productionMode: PRODUCTION_MODE,
-    enabledJourneys: [...ENABLED_JOURNEYS],
-    onboardingEnqueued,
-    extensionEnqueued,
-    applicationMilestoneEnqueued,
-    extensionFeedbackEnqueued,
     jobRecommendationsEnqueued,
-    claimed,
-    queued,
   });
 }

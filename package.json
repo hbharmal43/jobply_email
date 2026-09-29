@@ -2,7 +2,7 @@
   "name": "jobply-email",
   "version": "0.1.0",
   "private": true,
-  "description": "Jobply lifecycle email subsystem — Part A (SES feedback ingestion) + Part B (outbound send pipeline)",
+  "description": "Jobply daily job-recommendation dispatcher (email delivery via Customer.io)",
   "scripts": {
     "build": "tsc --noEmit",
     "deploy": "cdk deploy",
@@ -11,12 +11,10 @@
   },
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "^3.700.0",
-    "@aws-sdk/client-sesv2": "^3.700.0",
-    "@aws-sdk/client-sqs": "^3.700.0",
     "@supabase/supabase-js": "^2.47.0",
-    "pg": "^8.13.1",
     "aws-cdk-lib": "^2.170.0",
-    "constructs": "^10.4.2"
+    "constructs": "^10.4.2",
+    "pg": "^8.13.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

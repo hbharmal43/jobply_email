@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Welcome Email Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  /* ---------- Preview chrome (NOT part of the email) ---------- */
+  body { margin: 0; background: #EDEDEA; font-family: Geist, -apple-system, 'Segoe UI', Arial, sans-serif; color: #0A0A0A; }
+  .pv { max-width: 600px; margin: 0 auto; padding: 24px 16px 8px; }
+  .pv h1 { font: 800 20px/1.2 Outfit, Arial, sans-serif; margin: 0 0 4px; }
+  .pv p.note { margin: 0 0 16px; font-size: 13px; color: #757575; }
+  .pv-card { background: #fff; border: 1px solid #E5E5E5; border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; }
+  .pv-label { font: 700 11px/1 'JetBrains Mono', monospace; letter-spacing: .08em; text-transform: uppercase; color: #757575; margin-bottom: 10px; }
+  .inbox-row { display: flex; gap: 10px; align-items: baseline; padding: 8px 0; border-top: 1px solid #F0F0F0; font-size: 14px; }
+  .inbox-row:first-of-type { border-top: 0; }
+  .tag { flex: none; font: 700 11px/1 'JetBrains Mono', monospace; background: #ffde59; border-radius: 4px; padding: 4px 6px; }
+  .inbox-row b { font-weight: 600; }
+  .inbox-row span.pre { color: #757575; }
+  .toggle { display: flex; gap: 6px; flex-wrap: wrap; }
+  .toggle button { font: 500 13px Geist, Arial, sans-serif; border: 1px solid #E5E5E5; background: #fff; border-radius: 999px; padding: 7px 12px; cursor: pointer; color: #0A0A0A; }
+  .toggle button[aria-pressed="true"] { background: #0A0A0A; color: #fff; border-color: #0A0A0A; }
+  .logic { font-size: 13px; color: #444; margin: 10px 0 0; line-height: 1.5; }
+  /* email visibility switches driven by the toggle */
+  body.state-new .only-done { display: none !important; }
+  body.state-done .only-new { display: none !important; }
+  @media (max-width: 480px) { .inbox-row { flex-wrap: wrap; } }
+</style>
+</head>
+<body class="state-new">
+
+<!-- ===================== PREVIEW CONTROLS ===================== -->
+<div class="pv">
+  <h1>Welcome email: preview</h1>
+  <p class="note">Sample recipient: Sarah. Nothing here is published to Customer.io yet.</p>
+
+  <div class="pv-card">
+    <div class="pv-label">Subject line A/B test (50 / 50)</div>
+    <div class="inbox-row"><span class="tag">A</span><div><b>You're in, Sarah. Your first 20 applications are free</b> <span class="pre">· Here's the 5-minute setup to send your first one.</span></div></div>
+    <div class="inbox-row"><span class="tag">B</span><div><b>Welcome to Jobply 👋 Apply to your next job in one click</b> <span class="pre">· Here's the 5-minute setup to send your first one.</span></div></div>
+    <p class="logic">Same email body for both. We compare opens (A vs B) and clicks on the main button. From: <b>Jobply &lt;hello@jobply.ai&gt;</b></p>
+  </div>
+
+  <div class="pv-card">
+    <div class="pv-label">Personalization: who is this user?</div>
+    <div class="toggle" role="group" aria-label="User state">
+      <button type="button" data-state="new" aria-pressed="true">Just signed up (profile not finished)</button>
+      <button type="button" data-state="done" aria-pressed="false">Already finished onboarding</button>
+    </div>
+    <p class="logic">Sent immediately at signup. If <code>onboarding_completed</code> is already true when it sends, step 1 shows as done and the button switches from "Finish my profile" to "See my job matches".</p>
+  </div>
+</div>
+
+<!-- ===================== EMAIL (600px, table-based, inline styles) ===================== -->
+<div style="display:none;max-height:0;overflow:hidden;">Here's the 5-minute setup to send your first one.</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FAFAF7;">
+  <tr>
+    <td align="center" style="padding:16px 12px 40px;">
+
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#FFFFFF;border:1px solid #E5E5E5;border-radius:16px;overflow:hidden;">
+
+        <!-- Yellow accent bar -->
+        <tr><td style="height:6px;background:#ffde59;font-size:0;line-height:0;">&nbsp;</td></tr>
+
+        <!-- Header / logo -->
+        <tr>
+          <td style="padding:28px 40px 8px;">
+            <a href="https://jobply.ai" style="text-decoration:none;"><img src="https://userimg-assets.customeriomail.com/images/client-env-231518/01M2C665JT1WPWAV8PH60EJ9N3.png" width="112" height="44" alt="jobply" style="display:block;width:112px;height:auto;border:0;font:900 30px/44px Outfit,Arial,Helvetica,sans-serif;color:#0A0A0A;letter-spacing:-.02em;"></a>
+          </td>
+        </tr>
+
+        <!-- Hero -->
+        <tr>
+          <td style="padding:24px 40px 8px;">
+            <p style="margin:0 0 14px;font:700 12px/1 'JetBrains Mono',Menlo,Consolas,monospace;letter-spacing:.12em;text-transform:uppercase;color:#757575;">
+              <span style="display:inline-block;width:8px;height:8px;background:#ffde59;border-radius:50%;margin-right:8px;vertical-align:1px;"></span>Welcome to Jobply
+            </p>
+            <h1 style="margin:0 0 18px;font:800 34px/1.15 Outfit,Arial,Helvetica,sans-serif;color:#0A0A0A;letter-spacing:-.01em;">
+              Your next application takes <span style="background:linear-gradient(180deg,transparent 62%,#ffde59 62%);padding:0 2px;">one&nbsp;click.</span>
+            </h1>
+            <p style="margin:0 0 14px;font:400 16px/1.6 Geist,-apple-system,'Segoe UI',Arial,sans-serif;color:#0A0A0A;">Hi Sarah,</p>
+            <p style="margin:0;font:400 16px/1.6 Geist,-apple-system,'Segoe UI',Arial,sans-serif;color:#333333;">
+              You're in. Here's how to get your first application out today.
+            </p>
+          </td>
+        </tr>
+
+        <!-- Stat trio -->
+        <tr>
+          <td style="padding:24px 40px 8px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FFF9E6;border:1px solid #FBE9A6;border-radius:12px;">
+              <tr>
+                <td width="33%" align="center" style="padding:18px 6px;">
+                  <div style="font:700 26px/1 'JetBrains Mono',Menlo,Consolas,monospace;color:#0A0A0A;">20</div>
+                  <div style="margin-top:6px;font:500 12px/1.3 Geist,-apple-system,Arial,sans-serif;color:#555555;">free AI-assisted<br>applications</div>
+                </td>
+                <td width="34%" align="center" style="padding:18px 6px;border-left:1px solid #FBE9A6;border-right:1px solid #FBE9A6;">
+                  <div style="font:700 26px/1 'JetBrains Mono',Menlo,Consolas,monospace;color:#0A0A0A;">380K+</div>
+                  <div style="margin-top:6px;font:500 12px/1.3 Geist,-apple-system,Arial,sans-serif;color:#555555;">live jobs<br>to match against</div>
+                </td>
+                <td width="33%" align="center" style="padding:18px 6px;">
+                  <div style="font:700 26px/1 'JetBrains Mono',Menlo,Consolas,monospace;color:#0A0A0A;">30s</div>
+                  <div style="margin-top:6px;font:500 12px/1.3 Geist,-apple-system,Arial,sans-serif;color:#555555;">to install<br>the extension</div>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:10px 0 0;font:400 12px/1.4 Geist,-apple-system,Arial,sans-serif;color:#757575;text-align:center;">No credit card needed for your first 20.</p>
+          </td>
+        </tr>
+
+        <!-- Steps -->
+        <tr>
+          <td style="padding:28px 40px 4px;">
+            <h2 style="margin:0 0 18px;font:800 20px/1.3 Outfit,Arial,Helvetica,sans-serif;color:#0A0A0A;">Send your first application in about 5 minutes</h2>
+
+            <!-- Step 1: not done -->
+            <table class="only-new" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
+              <tr>
+                <td width="44" valign="top"><div style="width:30px;height:30px;border-radius:50%;background:#ffde59;text-align:center;font:700 14px/30px 'JetBrains Mono',Menlo,monospace;color:#0A0A0A;">1</div></td>
+                <td valign="top">
+                  <div style="font:600 16px/1.4 Geist,-apple-system,Arial,sans-serif;color:#0A0A0A;">Finish your profile <span style="font-weight:400;color:#757575;font-size:13px;">· 2 min</span></div>
+                  <div style="margin-top:2px;font:400 14px/1.5 Geist,-apple-system,Arial,sans-serif;color:#555555;">Add your résumé once. Jobply uses it to answer every application form.</div>
+                </td>
+              </tr>
+            </table>
+            <!-- Step 1: done -->
+            <table class="only-done" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
+              <tr>
+                <td width="44" valign="top"><div style="width:30px;height:30px;border-radius:50%;background:#DCFCE7;text-align:center;font:700 15px/30px Arial,sans-serif;color:#15803D;">&#10003;</div></td>
+                <td valign="top">
+                  <div style="font:600 16px/1.4 Geist,-apple-system,Arial,sans-serif;color:#757575;text-decoration:line-through;">Finish your profile</div>
+                  <div style="margin-top:2px;font:400 14px/1.5 Geist,-apple-system,Arial,sans-serif;color:#15803D;">Done. Nice work.</div>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Step 2 -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
+              <tr>
+                <td width="44" valign="top"><div style="width:30px;height:30px;border-radius:50%;background:#ffde59;text-align:center;font:700 14px/30px 'JetBrains Mono',Menlo,monospace;color:#0A0A0A;">2</div></td>
+                <td valign="top">
+                  <div style="font:600 16px/1.4 Geist,-apple-system,Arial,sans-serif;color:#0A0A0A;">Add the Chrome extension <span style="font-weight:400;color:#757575;font-size:13px;">· 30 sec</span></div>
+                  <div style="margin-top:2px;font:400 14px/1.5 Geist,-apple-system,Arial,sans-serif;color:#555555;">It works right inside Workday, Greenhouse, Ashby and Lever. <a href="https://chromewebstore.google.com/detail/jobply/clggbdcopoanbmfckeehnoodopjmfjjn" style="color:#0A0A0A;font-weight:600;text-decoration:underline;text-decoration-color:#ffde59;text-decoration-thickness:2px;">Add to Chrome</a></div>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Step 3 -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;">
+              <tr>
+                <td width="44" valign="top"><div style="width:30px;height:30px;border-radius:50%;background:#ffde59;text-align:center;font:700 14px/30px 'JetBrains Mono',Menlo,monospace;color:#0A0A0A;">3</div></td>
+                <td valign="top">
+                  <div style="font:600 16px/1.4 Geist,-apple-system,Arial,sans-serif;color:#0A0A0A;">Open a job and hit Autofill</div>
+                  <div style="margin-top:2px;font:400 14px/1.5 Geist,-apple-system,Arial,sans-serif;color:#555555;">Review, tweak anything you want, then submit. You stay in control.</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- CTA -->
+        <tr>
+          <td align="center" style="padding:20px 40px 32px;">
+            <a class="only-new" href="https://jobply.ai/onboarding" style="display:inline-block;background:#ffde59;color:#0A0A0A;font:700 16px/1 Geist,-apple-system,Arial,sans-serif;text-decoration:none;padding:16px 32px;border-radius:12px;border:2px solid #0A0A0A;">Finish my profile &rarr;</a>
+            <a class="only-done" href="https://jobply.ai/dashboard" style="display:inline-block;background:#ffde59;color:#0A0A0A;font:700 16px/1 Geist,-apple-system,Arial,sans-serif;text-decoration:none;padding:16px 32px;border-radius:12px;border:2px solid #0A0A0A;">See my job matches &rarr;</a>
+          </td>
+        </tr>
+
+        <!-- Founder P.S. -->
+        <tr>
+          <td style="padding:0 40px 32px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="border-left:3px solid #ffde59;padding:4px 0 4px 16px;">
+                  <p style="margin:0;font:400 15px/1.6 Geist,-apple-system,Arial,sans-serif;color:#333333;">
+                    <b style="color:#0A0A0A;">P.S.</b> I'm Hasnain, I built Jobply. If anything is confusing or doesn't work, just hit reply. It comes straight to me, and I read every one.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="padding:22px 40px 26px;background:#FAFAF7;border-top:1px solid #E5E5E5;">
+            <p style="margin:0 0 8px;font:400 12px/1.6 Geist,-apple-system,Arial,sans-serif;color:#757575;text-align:center;">You're getting this because you created a Jobply account.</p>
+            <p style="margin:0 0 8px;font:400 12px/1.6 Geist,-apple-system,Arial,sans-serif;color:#757575;text-align:center;">Jobply LLC · 1020 W Abram St, Arlington, TX 76013</p>
+            <p style="margin:0;font:400 12px/1.6 Geist,-apple-system,Arial,sans-serif;color:#757575;text-align:center;">
+              <a href="https://jobply.ai/privacy" style="color:#757575;">Privacy</a> &nbsp;·&nbsp;
+              <a href="https://jobply.ai/terms" style="color:#757575;">Terms</a> &nbsp;·&nbsp;
+              <a href="#unsubscribe" style="color:#0A0A0A;font-weight:600;">Unsubscribe</a>
+            </p>
+          </td>
+        </tr>
+
+      </table>
+
+    </td>
+  </tr>
+</table>
+
+<script>
+  document.querySelectorAll('.toggle button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.body.className = 'state-' + btn.dataset.state;
+      document.querySelectorAll('.toggle button').forEach(function (b) {
+        b.setAttribute('aria-pressed', String(b === btn));
+      });
+    });
+  });
+</script>
+</body>
+</html>

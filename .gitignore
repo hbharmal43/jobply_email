@@ -145,3 +145,6 @@ vite.config.ts.timestamp-*
 # Generated infrastructure output and local email previews
 cdk.out/
 preview_*.html
+
+# Playwright MCP screenshots/logs
+.playwright-mcp/

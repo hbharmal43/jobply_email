@@ -1,22 +1,22 @@
-# Email pipeline operations
+# Recommendation dispatcher operations
 
-The stack is deployed in paused mode by default. In paused mode, both recurring
-dispatchers are disabled, the dispatcher handler exits before scanning or
-claiming jobs, and the sender is pinned to the Gmail allowlist in `cdk.json`.
+This stack runs one thing: the daily job-recommendation dispatcher. All email
+sending, unsubscribes, and delivery metrics are handled by Customer.io. The
+SES/SQS send pipeline, the SES feedback Lambda, and the per-minute lifecycle
+dispatcher were removed on 2026-09-29.
+
+The stack is deployed paused by default: the daily schedule is disabled and the
+handler exits immediately (`PRODUCTION_MODE=false`).
 
 ## Pipeline
 
-1. The lifecycle dispatcher scans four lightweight journeys once a minute.
-   The recommendation dispatcher scans separately at 9:00 AM Central.
-2. It claims up to `claimBatchSize` due rows from Supabase each minute.
-3. Claimed jobs are published to SQS and marked queued.
-4. The sender Lambda rechecks preferences and suppressions, renders the email,
-   sends with SES, and records the SES message ID.
-5. SES events flow through EventBridge to the feedback Lambda and Supabase.
-
-SQS contains the active delivery buffer, not every future email. Future and
-deduplicated jobs live in Supabase `email_internal.email_jobs`; each dispatcher
-run moves the next due batch into SQS.
+1. EventBridge Scheduler invokes the recommendation dispatcher daily at
+   9:00 AM `America/Chicago` (follows daylight-saving time).
+2. It pulls up to `recommendationScanBatchSize` candidates from Supabase
+   (`get_job_recommendation_candidates`).
+3. For each candidate it matches jobs on RDS (`recommend_jobs_aws`) and records
+   a deduplicated `job_recommendations` row in `email_internal.email_jobs`
+   (dedupe key `job_recommendations:<user>:<UTC date>`).
 
 ## Data sources
 
@@ -33,64 +33,35 @@ Supabase `recommend_jobs_for_user_v3` it replaced — so the dispatcher reads ea
 embedding from Supabase and passes it in. Embeddings and years-of-experience are
 batched in chunks of 50 before the per-user loop.
 
-The RDS connection URL is the `awsRdsUrl` field on the existing
-`jobply-email/<env>/supabase` secret. It is only required when
-`job_recommendations` is in `enabledJourneys`; the lifecycle dispatcher never
-opens a Postgres connection. RDS is reachable over the public internet, so
-neither Lambda needs a VPC attachment.
+The RDS connection URL is the `awsRdsUrl` field on the
+`jobply-email/<env>/supabase` secret. RDS is reachable over the public internet,
+so the Lambda needs no VPC attachment.
 
 If the RDS query fails for a user, that user is skipped and retried on the next
 run — there is deliberately no fallback to the Supabase matcher, whose job
 tables are now stale.
 
-Candidate scans are bounded by `scanBatchSize`, but they do not restart from
-the same first page. Candidate RPCs exclude users whose deduplicated job already
-exists, so later runs advance through the remaining population. Recommendation
-candidates with no matches are recorded in `email_internal.email_candidate_scans`
-for the UTC day so they cannot block later candidates.
+Candidate scans are bounded by `recommendationScanBatchSize`, but they do not
+restart from the same first page. Candidates with no matches are recorded in
+`email_internal.email_candidate_scans` for the UTC day so they cannot block
+later candidates.
 
-## Journey coverage
+## Activate
 
-The dispatchers create these journeys when they become eligible:
-
-- `onboarding_abandoned`
-- `extension_nudge`
-- `application_milestone` (`application_praise` or `no_applications_nudge`)
-- `extension_feedback`
-- `job_recommendations`
-
-Job recommendations use EventBridge Scheduler with the
-`America/Chicago` timezone, so the 9:00 AM schedule follows daylight-saving
-time. Its larger `recommendationScanBatchSize` is independent from the
-lifecycle scanner's `scanBatchSize`.
-
-`welcome` and `account_deleted` are event-driven. The website must call
-`schedule_email_job` when login/onboarding completes or account deletion occurs;
-the dispatcher will claim and queue those jobs once they exist.
-
-## Activate production
-
-Review the number of currently due/candidate users before activation. Then run:
+Review the number of candidate users before activation. Then run:
 
 ```powershell
 npx cdk diff -c env=development -c enableDispatch=true --no-change-set
 npx cdk deploy -c env=development -c enableDispatch=true --require-approval never
 ```
 
-`enableDispatch=true` is authoritative: it enables both schedules,
-sets `PRODUCTION_MODE=true`, and explicitly clears `TEST_RECIPIENTS` and the
-historical `JOBPLY_TEST_USER_IDS` drift in the deployed Lambdas. Lifecycle
-journeys then scan once per minute; recommendations scan daily at 9:00 AM
-Central.
+`enableDispatch=true` enables the daily schedule and sets `PRODUCTION_MODE=true`.
 
-## Pause production
+## Pause
 
 ```powershell
 npx cdk deploy -c env=development -c enableDispatch=false --require-approval never
 ```
 
-This disables new scheduled runs, makes manual dispatcher invocations no-ops,
-and restores the sender allowlist. It does not delete Supabase jobs or SQS
-messages that already exist. If an
-incident requires a hard stop, also disable the sender's SQS event-source mapping
-after inspecting the queue and in-flight message counts.
+This disables the schedule and makes manual invocations no-ops. It does not
+delete rows already in `email_internal.email_jobs`.
