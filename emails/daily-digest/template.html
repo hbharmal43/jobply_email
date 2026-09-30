@@ -19,7 +19,7 @@
 </head>
 <body style="margin:0;padding:0;background:#FAFAF7;">
 {% assign fname = customer.first_name | strip %}
-{% capture NAME %}<span style="background:linear-gradient(180deg,transparent 60%,#ffde59 60%);padding:0 3px;">{{ fname | escape }}</span>{% endcapture %}
+{% capture NAME %}<span style="border-bottom:4px solid #ffde59;padding:0 1px;">{{ fname | escape }}</span>{% endcapture %}
 {% assign has_name = false %}{% if fname != blank %}{% assign has_name = true %}{% endif %}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FAFAF7;">
   <tr>
