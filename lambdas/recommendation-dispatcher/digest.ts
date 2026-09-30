@@ -38,8 +38,12 @@ export interface DigestPayload {
   top_salary: string | null;
   /** Title of the job carrying top_salary. */
   top_salary_title: string | null;
-  /** Rotates daily; the template picks subject lines with `| modulo: 3` and `| modulo: 7`. */
+  /** Rotates daily; subject_a / subject_b are its per-pool indexes. */
   subject_index: number;
+  /** 0-2: which "Money" subject line (variant A) to use. */
+  subject_a: number;
+  /** 0-6: which "Nudge" subject line (variant B) to use. Customer.io's `modulo` compares unreliably, so the template uses case/when on these. */
+  subject_b: number;
 }
 
 /**
@@ -167,6 +171,8 @@ export function buildDigest(input: {
     url: jobUrl(String(job.id), i + 1),
   }));
 
+  const subjectIdx = subjectIndex(input.userId, input.now);
+
   return {
     date_label: dateLabel(input.now),
     jobs,
@@ -178,6 +184,8 @@ export function buildDigest(input: {
     headline_index: headlineIndex(input.userId, input.now),
     top_salary: topSalary,
     top_salary_title: topSalaryTitle,
-    subject_index: subjectIndex(input.userId, input.now),
+    subject_index: subjectIdx,
+    subject_a: subjectIdx % 3,
+    subject_b: subjectIdx % 7,
   };
 }

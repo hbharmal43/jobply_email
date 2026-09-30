@@ -133,3 +133,12 @@ test('subjectIndex changes every day for both the 3- and 7-line pools', () => {
     prev = i;
   }
 });
+
+test('buildDigest sends ready-made subject indexes for each pool (no Liquid modulo)', () => {
+  for (let d = 0; d < 10; d++) {
+    const day = new Date(now.getTime() + d * 86_400_000);
+    const p = buildDigest({ userId: 'u1', jobs: [row('a', 90), row('b', 80), row('c', 70)], counts, now: day })!;
+    assert.equal(p.subject_a, p.subject_index % 3);
+    assert.equal(p.subject_b, p.subject_index % 7);
+  }
+});
