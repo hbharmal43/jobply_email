@@ -2,19 +2,20 @@
  * Recommendation dispatcher Lambda
  *
  * Runs daily (EventBridge Scheduler, America/Chicago). For each eligible user
- * it picks their top job matches and records them as a deduplicated
- * `job_recommendations` email job (one per user per UTC day).
+ * it picks their top job matches, records a deduplicated `job_recommendations`
+ * row (one per user per UTC day), then sends a `daily_job_matches` event to
+ * the Customer.io Track API. A Customer.io campaign renders the email.
  *
  * Job listings live on AWS RDS rather than Supabase, so the scan spans two
  * databases: candidate profiles and user embeddings come from Supabase, and
  * the matching itself runs on RDS via `recommend_jobs_aws`. See ./aws-rds.ts.
  *
- * Delivery is moving to Customer.io (the SES/SQS sender was removed on
- * 2026-09-29); the scheduled job row is the per-day dedupe record.
+ * The event payload is built by ./digest.ts. Jobs the user already applied to
+ * are dropped; users with fewer than 3 remaining jobs get no email that day.
  *
  * Env vars:
  *   SUPABASE_SECRET_ID   ARN/name of the Secrets Manager secret holding
- *                        { "url": "...", "serviceKey": "...", "awsRdsUrl": "..." }
+ *                        { "url", "serviceKey", "awsRdsUrl", "cioSiteId", "cioApiKey" }
  *   ENVIRONMENT           'production' | 'staging' | 'development' (default production)
  *   PRODUCTION_MODE       'true' to scan; anything else exits immediately
  *   SCAN_BATCH_SIZE       max candidates scanned per run (default 500)
@@ -22,12 +23,15 @@
  *                         the real candidate list
  *   AWS_RDS_JOBS_TABLE    jobs table on RDS (default scraped_jobs)
  *
- * Deps: @aws-sdk/client-secrets-manager, @supabase/supabase-js, pg
+ * Deps: @aws-sdk/client-secrets-manager, @supabase/supabase-js, pg, fetch (Customer.io)
  */
 
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { getRdsPool, recommendJobsFromAws, type RecommendedJobRow } from './aws-rds';
+import { getApplicationCounts, getRdsPool, recommendJobsFromAws, type RecommendedJobRow } from './aws-rds';
+import { buildDigest } from './digest';
+import { deliverDigest } from './deliver';
+import { sendCustomerIoEvent } from './customerio';
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? 'production';
 const PRODUCTION_MODE = process.env.PRODUCTION_MODE === 'true';
@@ -38,6 +42,9 @@ interface DispatcherSecret {
   serviceKey: string;
   /** Postgres URL for the RDS instance holding job listings. */
   awsRdsUrl?: string;
+  /** Customer.io Track API credentials. */
+  cioSiteId?: string;
+  cioApiKey?: string;
 }
 
 let cachedSecret: DispatcherSecret | null = null;
@@ -78,7 +85,8 @@ interface JobRecommendationCandidate {
   title: string | null;
 }
 
-const JOB_RECOMMENDATIONS_LIMIT = 10;
+/** More than the 5 we email, so jobs the user already applied to can be dropped. */
+const JOB_RECOMMENDATIONS_LIMIT = 15;
 const TEST_USER_IDS_ENV = process.env.JOBPLY_TEST_USER_IDS;
 
 /**
@@ -171,39 +179,47 @@ async function markRecommendationCandidateScanned(
   if (error) console.error('mark_email_candidate_scanned failed', { userId, error });
 }
 
-async function scanJobRecommendations(supabase: SupabaseClient): Promise<number> {
-  let candidates: JobRecommendationCandidate[] = [];
-  const todayStr = new Date().toISOString().split('T')[0];
+interface ScanOptions {
+  /** Build and log payloads only: no Supabase writes, no Customer.io events. */
+  dryRun: boolean;
+  /** Scan exactly these users instead of the candidate RPC. */
+  userIds?: string[];
+}
 
-  const testUserIds = TEST_USER_IDS_ENV
+async function loadCandidatesByIds(supabase: SupabaseClient, ids: string[]): Promise<JobRecommendationCandidate[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, email, first_name, full_name, title')
+    .in('id', ids)
+    .not('email', 'is', null);
+  if (error) throw new Error(`profile lookup failed: ${error.message}`);
+  return (data ?? []).map((p: any) => ({
+    user_id: p.id,
+    email: p.email,
+    first_name: p.first_name,
+    full_name: p.full_name,
+    title: p.title,
+  }));
+}
+
+async function scanJobRecommendations(supabase: SupabaseClient, opts: ScanOptions): Promise<number> {
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+
+  const envTestIds = TEST_USER_IDS_ENV
     ? TEST_USER_IDS_ENV.split(',').map((id) => id.trim()).filter((id) => id.length > 0)
     : [];
+  const explicitIds = opts.userIds && opts.userIds.length > 0 ? opts.userIds : envTestIds;
 
-  if (testUserIds.length > 0) {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, email, first_name, full_name, title')
-      .in('id', testUserIds)
-      .not('email', 'is', null);
-
-    if (error) {
-      console.error('JOBPLY_TEST_USER_IDS query failed', error);
-      return 0;
-    }
-    candidates = (data ?? []).map((p: any) => ({
-      user_id: p.id,
-      email: p.email,
-      first_name: p.first_name,
-      full_name: p.full_name,
-      title: p.title,
-    }));
+  let candidates: JobRecommendationCandidate[];
+  if (explicitIds.length > 0) {
+    candidates = await loadCandidatesByIds(supabase, explicitIds);
   } else {
     const { data, error } = await supabase.rpc('get_job_recommendation_candidates', {
       p_environment: ENVIRONMENT,
       p_scan_key: todayStr,
       p_limit: SCAN_BATCH_SIZE,
     });
-
     if (error) {
       console.error('get_job_recommendation_candidates failed', error);
       return 0;
@@ -213,25 +229,28 @@ async function scanJobRecommendations(supabase: SupabaseClient): Promise<number>
 
   if (candidates.length === 0) return 0;
 
-  // Matching now spans two databases: the user's vector and profile come from
-  // Supabase, the jobs themselves from RDS. Both Supabase lookups are batched
-  // up front so the per-user loop makes exactly one network call.
+  const { cioSiteId, cioApiKey } = await loadSecret();
+  if (!opts.dryRun && (!cioSiteId || !cioApiKey)) throw new Error('Secret missing cioSiteId/cioApiKey');
+
+  // Matching spans two databases: the user's vector and profile come from
+  // Supabase, the jobs and applications from RDS. Lookups are batched up front
+  // so the per-user loop makes one RDS call.
+  const pool = await getJobsPool();
   const userIds = candidates.map((candidate) => candidate.user_id);
-  const [vectors, yearsOfExperience] = await Promise.all([
+  const [vectors, yearsOfExperience, applicationCounts] = await Promise.all([
     fetchUserVectors(supabase, userIds),
     fetchYearsOfExperience(supabase, userIds),
+    getApplicationCounts(pool, userIds),
   ]);
 
-  const pool = await getJobsPool();
-
-  let enqueued = 0;
+  let sent = 0;
 
   for (const candidate of candidates) {
     const embedding = vectors.get(candidate.user_id);
     if (!embedding) {
       // Onboarding never produced a vector; nothing to match against.
       console.warn('no user embedding, skipping recommendations', { userId: candidate.user_id });
-      await markRecommendationCandidateScanned(supabase, candidate.user_id, todayStr);
+      if (!opts.dryRun) await markRecommendationCandidateScanned(supabase, candidate.user_id, todayStr);
       continue;
     }
 
@@ -251,56 +270,79 @@ async function scanJobRecommendations(supabase: SupabaseClient): Promise<number>
       continue;
     }
 
-    if (jobs.length === 0) {
+    const digest = buildDigest({
+      userId: candidate.user_id,
+      jobs,
+      counts: applicationCounts.get(candidate.user_id) ?? { total: 0, last7d: 0, interviews: 0 },
+      now,
+    });
+
+    if (opts.dryRun) {
+      console.log('dry run digest', JSON.stringify({ userId: candidate.user_id, rdsJobs: jobs.length, digest }));
+      continue;
+    }
+
+    if (!digest) {
       await markRecommendationCandidateScanned(supabase, candidate.user_id, todayStr);
       continue;
     }
 
-    const { data: jobId, error: rpcError } = await supabase.rpc('schedule_email_job', {
-      p_user_id: candidate.user_id,
-      p_recipient_email: candidate.email,
-      p_journey_key: 'job_recommendations',
-      p_template_key: 'job_recommendations',
-      p_dedupe_key: `job_recommendations:${candidate.user_id}:${todayStr}`,
-      p_category: 'recommendations',
-      p_payload: {
-        firstName: candidate.first_name || candidate.full_name,
-        userTitle: candidate.title,
-        jobs: jobs,
+    const result = await deliverDigest({
+      schedule: async () => {
+        const { data: jobId, error } = await supabase.rpc('schedule_email_job', {
+          p_user_id: candidate.user_id,
+          p_recipient_email: candidate.email,
+          p_journey_key: 'job_recommendations',
+          p_template_key: 'job_recommendations',
+          p_dedupe_key: `job_recommendations:${candidate.user_id}:${todayStr}`,
+          p_category: 'recommendations',
+          p_payload: digest,
+          p_environment: ENVIRONMENT,
+        });
+        if (error) throw new Error(error.message);
+        return (jobId as string | null) ?? null;
       },
-      p_environment: ENVIRONMENT,
+      send: () => sendCustomerIoEvent(
+        { siteId: cioSiteId!, apiKey: cioApiKey! },
+        candidate.user_id,
+        'daily_job_matches',
+        digest,
+      ),
     });
 
-    if (rpcError) {
-      console.error('schedule_email_job (job_recommendations) failed', { userId: candidate.user_id, error: rpcError });
-      continue;
+    if (result !== 'schedule_failed') {
+      await markRecommendationCandidateScanned(supabase, candidate.user_id, todayStr);
     }
-    await markRecommendationCandidateScanned(supabase, candidate.user_id, todayStr);
-    if (jobId) enqueued++;
+    if (result === 'sent') sent++;
+    else console.log('digest not sent', { userId: candidate.user_id, result });
   }
-  return enqueued;
+  return sent;
 }
 
 interface LambdaContext {
   callbackWaitsForEmptyEventLoop?: boolean;
 }
 
-export async function handler(_event?: unknown, context?: LambdaContext): Promise<void> {
+export interface DispatcherEvent {
+  dryRun?: boolean;
+  userIds?: string[];
+}
+
+export async function handler(event?: DispatcherEvent, context?: LambdaContext): Promise<void> {
   // The RDS pool deliberately keeps sockets open across warm invocations, so
   // the event loop never fully drains. Without this the runtime would hold the
   // invocation open until the timeout instead of returning.
   if (context) context.callbackWaitsForEmptyEventLoop = false;
 
-  if (!PRODUCTION_MODE) {
+  const dryRun = event?.dryRun === true;
+  // A dry run writes nothing, so it is allowed while the stack is paused.
+  if (!PRODUCTION_MODE && !dryRun) {
     console.log('dispatcher paused; no profiles scanned');
     return;
   }
 
   const supabase = await getSupabase();
-  const jobRecommendationsEnqueued = await scanJobRecommendations(supabase);
+  const digestsSent = await scanJobRecommendations(supabase, { dryRun, userIds: event?.userIds });
 
-  console.log('dispatcher run complete', {
-    environment: ENVIRONMENT,
-    jobRecommendationsEnqueued,
-  });
+  console.log('dispatcher run complete', { environment: ENVIRONMENT, dryRun, digestsSent });
 }

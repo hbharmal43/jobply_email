@@ -81,3 +81,15 @@ test('buildDigest keeps unscored jobs out and never emits "null" strings', () =>
   assert.equal(p.jobs[0].salary, null);
   assert.ok(!JSON.stringify(p).includes('"null"'));
 });
+
+test('work arrangement is normalized to a short label', () => {
+  const pick = (v: string | null) =>
+    buildDigest({ userId: 'u1', jobs: [row('a', 90, { ai_work_arrangement: v }), row('b', 80), row('c', 70)], counts, now })!.jobs[0].work_arrangement;
+  assert.equal(pick('Remote Solely'), 'Remote');
+  assert.equal(pick('Hybrid'), 'Hybrid');
+  assert.equal(pick('On-site'), 'On-site');
+  assert.equal(pick('onsite'), 'On-site');
+  assert.equal(pick('In office'), 'On-site');
+  assert.equal(pick('Flexible hours'), 'Flexible hours');
+  assert.equal(pick(null), null);
+});

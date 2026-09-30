@@ -89,6 +89,17 @@ export function headlineIndex(userId: string, now: Date): number {
 
 const clean = (value: string | null | undefined) => (value && value.trim() ? value.trim() : null);
 
+/** RDS values like "Remote Solely" become short pill labels. */
+function workArrangementLabel(value: string | null | undefined): string | null {
+  const v = clean(value);
+  if (!v) return null;
+  const lower = v.toLowerCase();
+  if (lower.includes('hybrid')) return 'Hybrid';
+  if (lower.includes('remote')) return 'Remote';
+  if (/on-?site|in[- ]office|in[- ]person/.test(lower)) return 'On-site';
+  return v;
+}
+
 export function buildDigest(input: {
   userId: string;
   jobs: RecommendedJobRow[];
@@ -108,7 +119,7 @@ export function buildDigest(input: {
     title: clean(job.job_title) ?? 'Open role',
     company: clean(job.company_name),
     location: clean(job.location),
-    work_arrangement: clean(job.ai_work_arrangement),
+    work_arrangement: workArrangementLabel(job.ai_work_arrangement),
     salary: formatSalary(job.salary_min, job.salary_max, job.salary_currency),
     match_pct: pct,
     url: jobUrl(String(job.id), i + 1),
