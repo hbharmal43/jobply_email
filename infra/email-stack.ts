@@ -15,7 +15,7 @@ export interface JobplyEmailStackProps extends cdk.StackProps {
    * dispatcher's scans. Defaults to environmentName, but can diverge from it —
    * this stack's resources are named "development" for historical reasons,
    * but profiles have no environment column, so it has always operated on
-   * real production data. Pinned explicitly in bin/app.ts rather than left to
+   * real production data. Pinned explicitly in infra/app.ts rather than left to
    * drift (see 2026-07-28 incident).
    */
   emailEnvironment?: string;
@@ -59,7 +59,7 @@ export class JobplyEmailStack extends cdk.Stack {
     const recommendationDispatcherFn = new NodejsFunction(this, 'RecommendationDispatcherFunction', {
       functionName: `jobply-email-${props.environmentName}-recommendation-dispatcher`,
       description: 'Builds the daily personalized job-recommendation digest',
-      entry: 'lambdas/dispatcher/handler.ts',
+      entry: 'lambdas/recommendation-dispatcher/handler.ts',
       handler: 'handler',
       // Node 22+ required: @supabase/supabase-js needs native WebSocket
       // (unavailable in the Node 20 Lambda runtime).

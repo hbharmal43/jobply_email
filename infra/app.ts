@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
-import { JobplyEmailStack } from '../lib/email-stack';
+import { JobplyEmailStack } from './email-stack';
 
 const app = new cdk.App();
 
