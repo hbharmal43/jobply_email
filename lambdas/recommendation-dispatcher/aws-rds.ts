@@ -119,6 +119,8 @@ export interface RecommendedJobRow {
   salary_max: number | string | null;
   salary_currency: string | null;
   match_score: number | string | null;
+  /** True when the user already has an application for this job. */
+  is_applied: boolean | null;
 }
 
 export interface RecommendJobsParams {
@@ -155,7 +157,8 @@ export async function recommendJobsFromAws(
       j.salary_min,
       j.salary_max,
       j.salary_currency,
-      r.match_score
+      r.match_score,
+      r.is_applied
     FROM recommend_jobs_aws($1, $2::uuid, $3, $4, $5) r
     JOIN ${JOBS_TABLE} j ON r.job_id = j.id
     WHERE j.is_active = true
