@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="x-apple-disable-message-reformatting">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>Your daily matches</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@800;900&amp;family=Geist:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@600;700&amp;display=swap" rel="stylesheet">
+<style>
+  :root { color-scheme: light; supported-color-schemes: light; }
+  body { margin:0; padding:0; background:#FAFAF7; }
+  @media (max-width: 480px) {
+    .px { padding-left:20px !important; padding-right:20px !important; }
+    .h1 { font-size:27px !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background:#FAFAF7;">
+{% assign fname = customer.first_name | strip %}
+{% capture NAME %}<span style="background:linear-gradient(180deg,transparent 60%,#ffde59 60%);padding:0 3px;">{{ fname | escape }}</span>{% endcapture %}
+{% assign has_name = false %}{% if fname != blank %}{% assign has_name = true %}{% endif %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FAFAF7;">
+  <tr>
+    <td align="center" style="padding:16px 12px 40px;">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#FFFFFF;border:1px solid #E5E5E5;border-radius:16px;overflow:hidden;">
+
+        <tr><td style="height:6px;background:#ffde59;font-size:0;line-height:0;">&nbsp;</td></tr>
+
+        <!-- Header -->
+        <tr>
+          <td class="px" style="padding:26px 36px 0;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td valign="middle"><a href="https://jobply.ai/?utm_source=customerio&amp;utm_medium=email&amp;utm_campaign=daily_digest&amp;utm_content=logo" target="_blank" rel="noopener" style="text-decoration:none;"><img src="https://userimg-assets.customeriomail.com/images/client-env-231518/01M2C665JT1WPWAV8PH60EJ9N3.png" width="96" height="37" alt="jobply" style="display:block;width:96px;height:auto;border:0;font:900 26px/37px Outfit,Arial,sans-serif;color:#0A0A0A;"></a></td>
+                <td valign="middle" align="right" style="font:700 11px/1 'JetBrains Mono',Menlo,Consolas,monospace;letter-spacing:.1em;text-transform:uppercase;color:#757575;">{{ event.date_label | escape }}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Hero -->
+        <tr>
+          <td class="px" style="padding:26px 36px 6px;">
+            <p style="margin:0 0 12px;font:700 12px/1 'JetBrains Mono',Menlo,Consolas,monospace;letter-spacing:.12em;text-transform:uppercase;color:#757575;">
+              <span style="display:inline-block;width:8px;height:8px;background:#ffde59;border-radius:50%;margin-right:8px;vertical-align:1px;"></span>Your daily matches
+            </p>
+            <h1 class="h1" style="margin:0 0 10px;font:800 31px/1.18 Outfit,Arial,Helvetica,sans-serif;color:#0A0A0A;letter-spacing:-.01em;">{% case event.headline_index %}{% when 0 %}{% if has_name %}{{ NAME }}, did you ply today? 👀{% else %}Did you ply today? 👀{% endif %}{% when 1 %}{% if has_name %}Job market's rough. You're tougher, {{ NAME }} 💪{% else %}Job market's rough. You're tougher 💪{% endif %}{% when 2 %}{% if has_name %}We know it's brutal out there, {{ NAME }}. 10 more plies this week. You've got this.{% else %}We know it's brutal out there. 10 more plies this week. You've got this.{% endif %}{% when 3 %}{% if has_name %}{{ NAME }}, 1 ply before lunch? 🍜{% else %}1 ply before lunch? 🍜{% endif %}{% when 4 %}{% if has_name %}5 plies today, {{ NAME }}. Future you says thanks 🙏{% else %}5 plies today. Future you says thanks 🙏{% endif %}{% when 5 %}{% if has_name %}Rejections are just redirects, {{ NAME }}. Ply again 🔁{% else %}Rejections are just redirects. Ply again 🔁{% endif %}{% when 6 %}{% if has_name %}Your offer letter won't ply itself, {{ NAME }} 😤{% else %}Your offer letter won't ply itself 😤{% endif %}{% when 7 %}{% if has_name %}{{ NAME }}, your next job is in here. Ply it 🎯{% else %}Your next job is in here. Ply it 🎯{% endif %}{% when 8 %}{% if has_name %}Main character energy only, {{ NAME }}. Ply it ✨{% else %}Main character energy only. Ply it ✨{% endif %}{% when 9 %}{% if has_name %}{{ NAME }}, the market's tough. Consistency is tougher 📈{% else %}The market's tough. Consistency is tougher 📈{% endif %}{% when 10 %}{% if has_name %}Not every ply lands. Every ply counts, {{ NAME }}.{% else %}Not every ply lands. Every ply counts.{% endif %}{% when 11 %}{% if has_name %}{{ NAME }}, new week. Offer letter loading ⏳{% else %}New week. Offer letter loading ⏳{% endif %}{% when 12 %}{% if has_name %}Weekend drop: 5 fresh roles to ply, {{ NAME }} 🔥{% else %}Weekend drop: 5 fresh roles to ply 🔥{% endif %}{% else %}{% if has_name %}Just a few more plies, {{ NAME }}. That's how it happens 🍀{% else %}Just a few more plies. That's how it happens 🍀{% endif %}{% endcase %}</h1>
+            <p style="margin:0;font:400 15px/1.6 Geist,-apple-system,'Segoe UI',Arial,sans-serif;color:#555555;">{{ event.job_count }} fresh roles that fit you. <b style="color:#0A0A0A;">You miss 100% of the jobs you don't ply.</b></p>
+          </td>
+        </tr>
+
+        <!-- Motivation strip -->
+        <tr>
+          <td class="px" style="padding:18px 36px 6px;">
+            {% if event.interviews > 0 %}
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#DCFCE7;border:1px solid #BBF7D0;border-radius:12px;">
+              <tr>
+                <td width="64" align="center" valign="middle" style="padding:14px 0 14px 14px;font:700 28px/1 'JetBrains Mono',Menlo,Consolas,monospace;color:#15803D;">{{ event.interviews }}</td>
+                <td valign="middle" style="padding:14px 16px 14px 12px;font:500 14px/1.45 Geist,-apple-system,Arial,sans-serif;color:#14532D;"><b>🎉 of your plies {% if event.interviews == 1 %}is{% else %}are{% endif %} at the interview stage.</b> Nice work. Keep a few more in the pipeline.</td>
+              </tr>
+            </table>
+            {% elsif event.applied_7d > 0 %}
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FFF9E6;border:1px solid #FBE9A6;border-radius:12px;">
+              <tr>
+                <td width="64" align="center" valign="middle" style="padding:14px 0 14px 14px;font:700 28px/1 'JetBrains Mono',Menlo,Consolas,monospace;color:#0A0A0A;">{{ event.applied_7d }}</td>
+                <td valign="middle" style="padding:14px 16px 14px 12px;font:500 14px/1.45 Geist,-apple-system,Arial,sans-serif;color:#333333;"><b style="color:#0A0A0A;">{% if event.applied_7d == 1 %}ply{% else %}plies{% endif %} this week.</b> Keep the streak going. One more today?</td>
+              </tr>
+            </table>
+            {% elsif event.applied_total == 0 %}
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FFF9E6;border:1px solid #FBE9A6;border-radius:12px;">
+              <tr>
+                <td width="64" align="center" valign="middle" style="padding:14px 0 14px 14px;font:26px/1 Arial,sans-serif;">🚀</td>
+                <td valign="middle" style="padding:14px 16px 14px 12px;font:500 14px/1.45 Geist,-apple-system,Arial,sans-serif;color:#333333;"><b style="color:#0A0A0A;">Your first ply is one click away.</b> Pick a job below and hit Autofill.</td>
+              </tr>
+            </table>
+            {% else %}
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F5F5F5;border:1px solid #E5E5E5;border-radius:12px;">
+              <tr>
+                <td width="64" align="center" valign="middle" style="padding:14px 0 14px 14px;font:26px/1 Arial,sans-serif;">☕</td>
+                <td valign="middle" style="padding:14px 16px 14px 12px;font:500 14px/1.45 Geist,-apple-system,Arial,sans-serif;color:#333333;"><b style="color:#0A0A0A;">Quiet week?</b> One ply today keeps your search moving.</td>
+              </tr>
+            </table>
+            {% endif %}
+          </td>
+        </tr>
+
+        <!-- Daily GIF -->
+        <tr>
+          <td class="px" style="padding:14px 36px 2px;">
+            <!-- GIF_URL -->
+            <img src="https://jobply.ai/favicon.ico" width="528" alt="Every application moves you from Apply to Interview to Offer. Keep going." style="display:block;width:100%;max-width:528px;height:auto;border:0;border-radius:12px;">
+          </td>
+        </tr>
+
+        <!-- Job cards -->
+        <tr>
+          <td class="px" style="padding:14px 36px 4px;">
+            {% for job in event.jobs %}
+            {% assign initial_src = job.company | default: job.title %}
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #E5E5E5;border-radius:14px;margin:0 0 12px;border-collapse:separate;">
+              <tr><td style="padding:18px 18px 16px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+                  <td width="46" valign="top"><div style="width:36px;height:36px;border-radius:10px;background:#F5F5F5;text-align:center;font:800 15px/36px Outfit,Arial,sans-serif;color:#0A0A0A;">{{ initial_src | slice: 0 | upcase | escape }}</div></td>
+                  <td valign="top">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+                      <td valign="top" style="font:700 11px/1.3 'JetBrains Mono',Menlo,monospace;letter-spacing:.06em;text-transform:uppercase;color:#757575;">{% if job.company != blank %}{{ job.company | escape }}{% endif %}</td>
+                      <td valign="top" align="right" style="white-space:nowrap;"><span style="display:inline-block;background:#FFF9E6;border:1px solid #FBE9A6;color:#0A0A0A;padding:3px 8px;border-radius:999px;font:700 11px/14px 'JetBrains Mono',Menlo,monospace;">{{ job.match_pct }}% match</span></td>
+                    </tr></table>
+                    <a href="{{ job.url }}" target="_blank" rel="noopener" style="display:block;margin:6px 0 2px;font:800 18px/1.3 Outfit,Arial,Helvetica,sans-serif;color:#0A0A0A;text-decoration:none;">{{ job.title | escape }}</a>
+                    {% if job.location != blank %}<div style="font:400 13px/1.5 Geist,-apple-system,Arial,sans-serif;color:#555555;">{{ job.location | escape }}</div>{% endif %}
+                    {% if job.work_arrangement != blank or job.salary != blank %}<div>{% if job.work_arrangement != blank %}<span style="display:inline-block;background:#F5F5F5;color:#404040;padding:4px 9px;border-radius:999px;font:600 11px/14px Geist,-apple-system,Arial,sans-serif;margin:6px 6px 0 0;">{{ job.work_arrangement | escape }}</span>{% endif %}{% if job.salary != blank %}<span style="display:inline-block;background:#DCFCE7;color:#15803D;padding:4px 9px;border-radius:999px;font:600 11px/14px Geist,-apple-system,Arial,sans-serif;margin:6px 6px 0 0;">{{ job.salary | escape }}</span>{% endif %}</div>{% endif %}
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;"><tr><td style="border-radius:10px;background:#ffde59;border:2px solid #0A0A0A;">
+                      <a href="{{ job.url }}" target="_blank" rel="noopener" style="display:inline-block;padding:9px 16px;font:700 13px/1 Geist,-apple-system,Arial,sans-serif;color:#0A0A0A;text-decoration:none;">Ply this job &rarr;</a>
+                    </td></tr></table>
+                  </td>
+                </tr></table>
+              </td></tr>
+            </table>
+            {% endfor %}
+          </td>
+        </tr>
+
+        <!-- More matches -->
+        <tr>
+          <td align="center" class="px" style="padding:14px 36px 30px;">
+            {% if event.more_count > 0 %}
+            <a href="https://jobply.ai/dashboard/jobs/recommended?utm_source=customerio&amp;utm_medium=email&amp;utm_campaign=daily_digest&amp;utm_content=see_more" target="_blank" rel="noopener" style="display:inline-block;background:#0A0A0A;color:#FFFFFF;font:700 15px/1 Geist,-apple-system,Arial,sans-serif;text-decoration:none;padding:15px 26px;border-radius:12px;">See {{ event.more_count }} more {% if event.more_count == 1 %}match{% else %}matches{% endif %} in Jobply &rarr;</a>
+            {% else %}
+            <a href="https://jobply.ai/dashboard/jobs/recommended?utm_source=customerio&amp;utm_medium=email&amp;utm_campaign=daily_digest&amp;utm_content=see_more" target="_blank" rel="noopener" style="display:inline-block;background:#0A0A0A;color:#FFFFFF;font:700 15px/1 Geist,-apple-system,Arial,sans-serif;text-decoration:none;padding:15px 26px;border-radius:12px;">Browse all jobs in Jobply &rarr;</a>
+            {% endif %}
+            <p style="margin:14px 0 0;font:400 12px/1.5 Geist,-apple-system,Arial,sans-serif;color:#757575;">Matches get sharper as you save, dismiss and apply to jobs.</p>
+          </td>
+        </tr>
+
+        <!-- One-tap check-in -->
+        <tr>
+          <td class="px" style="padding:0 36px 30px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px dashed #D4D4D4;border-radius:14px;">
+              <tr><td align="center" style="padding:18px 12px 6px;font:800 16px/1.3 Outfit,Arial,sans-serif;color:#0A0A0A;">How's the job hunt feeling today?</td></tr>
+              <tr><td align="center" style="padding:6px 8px 18px;">
+                <a href="https://jobply.ai/dashboard/jobs/recommended?utm_source=customerio&amp;utm_medium=email&amp;utm_campaign=daily_digest&amp;utm_content=mood_rough" target="_blank" rel="noopener" style="display:inline-block;margin:4px;padding:10px 14px;border:1px solid #E5E5E5;border-radius:999px;font:600 14px/1 Geist,-apple-system,Arial,sans-serif;color:#0A0A0A;text-decoration:none;">😩 Rough</a>
+                <a href="https://jobply.ai/dashboard/jobs/recommended?utm_source=customerio&amp;utm_medium=email&amp;utm_campaign=daily_digest&amp;utm_content=mood_meh" target="_blank" rel="noopener" style="display:inline-block;margin:4px;padding:10px 14px;border:1px solid #E5E5E5;border-radius:999px;font:600 14px/1 Geist,-apple-system,Arial,sans-serif;color:#0A0A0A;text-decoration:none;">😐 Meh</a>
+                <a href="https://jobply.ai/dashboard/jobs/recommended?utm_source=customerio&amp;utm_medium=email&amp;utm_campaign=daily_digest&amp;utm_content=mood_fire" target="_blank" rel="noopener" style="display:inline-block;margin:4px;padding:10px 14px;border:1px solid #E5E5E5;border-radius:999px;font:600 14px/1 Geist,-apple-system,Arial,sans-serif;color:#0A0A0A;text-decoration:none;">🔥 On fire</a>
+              </td></tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td class="px" style="padding:22px 36px 26px;background:#FAFAF7;border-top:1px solid #E5E5E5;">
+            <p style="margin:0 0 8px;font:400 12px/1.6 Geist,-apple-system,Arial,sans-serif;color:#757575;text-align:center;">You're getting this because you have a Jobply account. One email a day, only when we have strong matches.</p>
+            <p style="margin:0 0 8px;font:400 12px/1.6 Geist,-apple-system,Arial,sans-serif;color:#757575;text-align:center;">Jobply LLC · 1020 W Abram St, Arlington, TX 76013</p>
+            <p style="margin:0;font:400 12px/1.6 Geist,-apple-system,Arial,sans-serif;color:#757575;text-align:center;">
+              <a href="https://jobply.ai/privacy" target="_blank" rel="noopener" style="color:#757575;">Privacy</a> &nbsp;·&nbsp;
+              <a href="https://jobply.ai/terms" target="_blank" rel="noopener" style="color:#757575;">Terms</a> &nbsp;·&nbsp;
+              <a href="{% unsubscribe_url %}" target="_blank" rel="noopener" style="color:#0A0A0A;font-weight:600;">Unsubscribe</a>
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>
