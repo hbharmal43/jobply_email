@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  toMatchPct, formatSalary, jobUrl, dateLabel, headlineIndex, buildDigest, HEADLINE_COUNT,
+  toMatchPct, formatSalary, jobUrl, dateLabel, headlineIndex, buildDigest, HEADLINE_COUNT, shortSalary, subjectIndex,
 } from './digest';
 import type { RecommendedJobRow } from './aws-rds';
 
@@ -94,4 +94,42 @@ test('work arrangement is normalized to a short label', () => {
   assert.equal(pick('In office'), 'On-site');
   assert.equal(pick('Flexible hours'), 'Flexible hours');
   assert.equal(pick(null), null);
+});
+
+test('shortSalary rounds annual amounts to K and ignores hourly-looking values', () => {
+  assert.equal(shortSalary(285000, 'USD'), '$285K');
+  assert.equal(shortSalary('95500', null), '$96K');
+  assert.equal(shortSalary(120000, 'EUR'), '€120K');
+  assert.equal(shortSalary(45, 'USD'), null);
+  assert.equal(shortSalary(null, 'USD'), null);
+});
+
+test('buildDigest exposes the top salary among emailed jobs and its title', () => {
+  const jobs = [
+    row('a', 90, { job_title: 'Analyst', salary_min: 90000, salary_max: 120000, salary_currency: 'USD' }),
+    row('b', 80, { job_title: 'Principal Engineer, AI', salary_min: 210000, salary_max: 285000, salary_currency: 'USD' }),
+    row('c', 70),
+  ];
+  const p = buildDigest({ userId: 'u1', jobs, counts, now })!;
+  assert.equal(p.top_salary, '$285K');
+  assert.equal(p.top_salary_title, 'Principal Engineer, AI');
+});
+
+test('buildDigest has null top salary when no emailed job lists one', () => {
+  const p = buildDigest({ userId: 'u1', jobs: [row('a', 90), row('b', 80), row('c', 70)], counts, now })!;
+  assert.equal(p.top_salary, null);
+  assert.equal(p.top_salary_title, null);
+});
+
+test('subjectIndex changes every day for both the 3- and 7-line pools', () => {
+  let prev = -1;
+  for (let d = 0; d < 30; d++) {
+    const i = subjectIndex('u1', new Date(now.getTime() + d * 86_400_000));
+    assert.ok(i >= 0 && i < 84);
+    if (prev >= 0) {
+      assert.notEqual(i % 3, prev % 3);
+      assert.notEqual(i % 7, prev % 7);
+    }
+    prev = i;
+  }
 });

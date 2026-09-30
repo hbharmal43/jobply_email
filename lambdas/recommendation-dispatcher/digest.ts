@@ -34,6 +34,12 @@ export interface DigestPayload {
   applied_7d: number;
   interviews: number;
   headline_index: number;
+  /** Highest annual salary among the emailed jobs, e.g. "$285K"; null if none list one. */
+  top_salary: string | null;
+  /** Title of the job carrying top_salary. */
+  top_salary_title: string | null;
+  /** Rotates daily; the template picks subject lines with `| modulo: 3` and `| modulo: 7`. */
+  subject_index: number;
 }
 
 /**
@@ -70,6 +76,16 @@ export function formatSalary(
   return null;
 }
 
+/** Annual amounts only: values under 10,000 look hourly and would read oddly ("up to $45"). */
+export function shortSalary(amount: number | string | null, currency: string | null): string | null {
+  if (amount === null || amount === undefined || amount === '') return null;
+  const n = Number(amount);
+  if (!Number.isFinite(n) || n < 10_000) return null;
+  const code = (currency ?? '$').trim().toUpperCase();
+  const symbol = CURRENCY[code] ?? `${code} `;
+  return `${symbol}${Math.round(n / 1000)}K`;
+}
+
 export function jobUrl(id: string, rank: number): string {
   return `https://jobply.ai/dashboard/jobs/${encodeURIComponent(id)}?utm_source=customerio&utm_medium=email&utm_campaign=daily_digest&utm_content=job_${rank}`;
 }
@@ -88,6 +104,14 @@ export function headlineIndex(userId: string, now: Date): number {
   for (const ch of userId) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
   const day = Math.floor(now.getTime() / 86_400_000);
   return (day + hash) % HEADLINE_COUNT;
+}
+
+/** 84 = lcm(3, 7, 4): both subject pools change every day. Offset from headlineIndex. */
+export function subjectIndex(userId: string, now: Date): number {
+  let hash = 7;
+  for (const ch of userId) hash = (hash * 131 + ch.charCodeAt(0)) >>> 0;
+  const day = Math.floor(now.getTime() / 86_400_000);
+  return (day + hash) % 84;
 }
 
 const clean = (value: string | null | undefined) => (value && value.trim() ? value.trim() : null);
@@ -116,7 +140,22 @@ export function buildDigest(input: {
 
   if (eligible.length < MIN_JOBS_TO_SEND) return null;
 
-  const jobs: DigestJob[] = eligible.slice(0, EMAIL_JOB_COUNT).map(({ job, pct }, i) => ({
+  const top = eligible.slice(0, EMAIL_JOB_COUNT);
+
+  let topAmount = 0;
+  let topSalary: string | null = null;
+  let topSalaryTitle: string | null = null;
+  for (const { job } of top) {
+    const amount = Number(job.salary_max ?? job.salary_min ?? 0);
+    const label = shortSalary(job.salary_max ?? job.salary_min, job.salary_currency);
+    if (label && amount > topAmount) {
+      topAmount = amount;
+      topSalary = label;
+      topSalaryTitle = clean(job.job_title);
+    }
+  }
+
+  const jobs: DigestJob[] = top.map(({ job, pct }, i) => ({
     id: String(job.id),
     rank: i + 1,
     title: clean(job.job_title) ?? 'Open role',
@@ -137,5 +176,8 @@ export function buildDigest(input: {
     applied_7d: input.counts.last7d,
     interviews: input.counts.interviews,
     headline_index: headlineIndex(input.userId, input.now),
+    top_salary: topSalary,
+    top_salary_title: topSalaryTitle,
+    subject_index: subjectIndex(input.userId, input.now),
   };
 }
