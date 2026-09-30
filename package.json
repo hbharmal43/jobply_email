@@ -5,6 +5,8 @@
   "description": "Jobply daily job-recommendation dispatcher (email delivery via Customer.io)",
   "scripts": {
     "build": "tsc --noEmit",
+    "test": "node --import tsx --test \"lambdas/**/*.test.ts\"",
+    "dispatch:local": "tsx scripts/run-dispatcher.ts",
     "deploy": "cdk deploy",
     "diff": "cdk diff",
     "synth": "cdk synth"
@@ -22,6 +24,7 @@
     "aws-cdk": "^2.170.0",
     "esbuild": "^0.24.0",
     "ts-node": "^10.9.2",
+    "tsx": "^4.23.15",
     "typescript": "~5.6.3"
   }
 }
