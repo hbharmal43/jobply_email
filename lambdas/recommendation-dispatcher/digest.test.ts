@@ -13,8 +13,10 @@ const row = (id: string, score: number | string | null, extra: Partial<Recommend
 const counts = { total: 12, last7d: 4, interviews: 0 };
 const now = new Date('2026-09-29T14:00:00Z');
 
-test('toMatchPct handles 0-1, 0-100, strings, and junk', () => {
-  assert.equal(toMatchPct(0.923), 92);
+test('toMatchPct treats scores as 0-100 (decayed scores below 1 stay tiny)', () => {
+  assert.equal(toMatchPct(0.57), 1);
+  assert.equal(toMatchPct(1), 1);
+  assert.equal(toMatchPct(0.2), 0);
   assert.equal(toMatchPct(87.6), 88);
   assert.equal(toMatchPct('81.25'), 81);
   assert.equal(toMatchPct(140), 100);

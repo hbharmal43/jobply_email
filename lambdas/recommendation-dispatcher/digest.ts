@@ -36,13 +36,16 @@ export interface DigestPayload {
   headline_index: number;
 }
 
-/** Scores may be 0–1 or 0–100 and arrive as numeric strings from pg. */
+/**
+ * recommend_jobs_aws scores are 0–100 (similarity × freshness decay) and may
+ * arrive as numeric strings from pg. A heavily decayed score below 1 is still
+ * on the 0–100 scale, so it is never rescaled as a fraction.
+ */
 export function toMatchPct(score: number | string | null): number | null {
   if (score === null || score === undefined || score === '') return null;
   const n = typeof score === 'string' ? Number(score) : score;
   if (!Number.isFinite(n)) return null;
-  const pct = n <= 1 ? n * 100 : n;
-  return Math.min(100, Math.max(0, Math.round(pct)));
+  return Math.min(100, Math.max(0, Math.round(n)));
 }
 
 const CURRENCY: Record<string, string> = { USD: '$', $: '$', EUR: '€', '€': '€', GBP: '£', '£': '£' };

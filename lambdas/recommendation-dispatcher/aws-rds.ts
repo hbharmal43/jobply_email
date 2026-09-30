@@ -186,16 +186,24 @@ export async function getApplicationCounts(
   const counts = new Map<string, ApplicationCounts>();
   if (userIds.length === 0) return counts;
 
-  const result = await pool.query<{ user_id: string; total: number; last7d: number; interviews: number }>(
-    `SELECT user_id::text AS user_id,
-            COUNT(*)::int AS total,
-            COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days')::int AS last7d,
-            COUNT(*) FILTER (WHERE status = 'interview')::int AS interviews
-       FROM applications
-      WHERE user_id::text = ANY($1::text[])
-      GROUP BY user_id`,
-    [userIds],
-  );
+  // Counts only feed the motivation strip, so a failure here must not stop
+  // the day's digests: fall back to "no counts" and keep going.
+  let result;
+  try {
+    result = await pool.query<{ user_id: string; total: number; last7d: number; interviews: number }>(
+      `SELECT user_id::text AS user_id,
+              COUNT(*)::int AS total,
+              COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days')::int AS last7d,
+              COUNT(*) FILTER (WHERE status = 'interview')::int AS interviews
+         FROM applications
+        WHERE user_id::text = ANY($1::text[])
+        GROUP BY user_id`,
+      [userIds],
+    );
+  } catch (error) {
+    console.error('application counts query failed; sending digests without counts', { error: String(error) });
+    return counts;
+  }
   for (const r of result.rows) {
     counts.set(r.user_id, { total: r.total, last7d: r.last7d, interviews: r.interviews });
   }
