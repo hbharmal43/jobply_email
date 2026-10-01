@@ -18,6 +18,7 @@
 </style>
 </head>
 <body style="margin:0;padding:0;background:#FAFAF7;">
+{% assign fname = customer.first_name | strip %}{% if fname == blank %}{% assign fname = customer.full_name | strip | split: " " | first | capitalize %}{% endif %}
 {% assign onboarded = false %}{% assign ob = customer.onboarding_completed | append: "" | downcase %}{% if ob == "true" %}{% assign onboarded = true %}{% endif %}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FAFAF7;">
   <tr>
@@ -31,7 +32,7 @@
         <!-- Header / logo -->
         <tr>
           <td class="px" style="padding:28px 40px 8px;">
-            <a href="https://jobply.ai/?utm_source=customerio&amp;utm_medium=email&amp;utm_campaign=welcome" style="text-decoration:none;"><img src="https://userimg-assets.customeriomail.com/images/client-env-231518/01M2C665JT1WPWAV8PH60EJ9N3.png" width="112" height="44" alt="jobply" style="display:block;width:112px;height:auto;border:0;font:900 30px/44px Outfit,Arial,Helvetica,sans-serif;color:#0A0A0A;letter-spacing:-.02em;"></a>
+            <a href="https://jobply.ai/?utm_source=customerio&amp;utm_medium=email&amp;utm_campaign=welcome" target="_blank" rel="noopener" style="text-decoration:none;"><img src="https://userimg-assets.customeriomail.com/images/client-env-231518/01M2C665JT1WPWAV8PH60EJ9N3.png" width="112" height="44" alt="jobply" style="display:block;width:112px;height:auto;border:0;font:900 30px/44px Outfit,Arial,Helvetica,sans-serif;color:#0A0A0A;letter-spacing:-.02em;"></a>
           </td>
         </tr>
 
@@ -42,9 +43,9 @@
               <span style="display:inline-block;width:8px;height:8px;background:#ffde59;border-radius:50%;margin-right:8px;vertical-align:1px;"></span>Welcome to Jobply
             </p>
             <h1 class="h1" style="margin:0 0 18px;font:800 34px/1.15 Outfit,Arial,Helvetica,sans-serif;color:#0A0A0A;letter-spacing:-.01em;">
-              Your next application takes <span style="background:linear-gradient(180deg,transparent 62%,#ffde59 62%);padding:0 2px;">one&nbsp;click.</span>
+              Your next application takes <span style="border-bottom:4px solid #ffde59;padding:0 1px;">one&nbsp;click.</span>
             </h1>
-            <p style="margin:0 0 14px;font:400 16px/1.6 Geist,-apple-system,'Segoe UI',Arial,sans-serif;color:#0A0A0A;">Hi {{ customer.first_name | default: "there" }},</p>
+            <p style="margin:0 0 14px;font:400 16px/1.6 Geist,-apple-system,'Segoe UI',Arial,sans-serif;color:#0A0A0A;">Hi {% if fname != blank %}{{ fname | escape }}{% else %}there{% endif %},</p>
             <p style="margin:0;font:400 16px/1.6 Geist,-apple-system,'Segoe UI',Arial,sans-serif;color:#333333;">
               You're in. Here's how to get your first application out today.
             </p>
@@ -105,7 +106,7 @@
                 <td width="44" valign="top"><div style="width:30px;height:30px;border-radius:50%;background:#ffde59;text-align:center;font:700 14px/30px 'JetBrains Mono',Menlo,monospace;color:#0A0A0A;">2</div></td>
                 <td valign="top">
                   <div style="font:600 16px/1.4 Geist,-apple-system,Arial,sans-serif;color:#0A0A0A;">Add the Chrome extension <span style="font-weight:400;color:#757575;font-size:13px;">· 30 sec</span></div>
-                  <div style="margin-top:2px;font:400 14px/1.5 Geist,-apple-system,Arial,sans-serif;color:#555555;">It works right inside Workday, Greenhouse, Ashby and Lever. <a href="https://chromewebstore.google.com/detail/jobply/clggbdcopoanbmfckeehnoodopjmfjjn" style="color:#0A0A0A;font-weight:600;text-decoration:underline;text-decoration-color:#ffde59;text-decoration-thickness:2px;">Add to Chrome</a></div>
+                  <div style="margin-top:2px;font:400 14px/1.5 Geist,-apple-system,Arial,sans-serif;color:#555555;">It works right inside Workday, Greenhouse, Ashby and Lever. <a href="https://chromewebstore.google.com/detail/jobply/clggbdcopoanbmfckeehnoodopjmfjjn" target="_blank" rel="noopener" style="color:#0A0A0A;font-weight:600;text-decoration:underline;text-decoration-color:#ffde59;text-decoration-thickness:2px;">Add to Chrome</a></div>
                 </td>
               </tr>
             </table>
@@ -126,8 +127,8 @@
         <!-- CTA -->
         <tr>
           <td align="center" class="px" style="padding:20px 40px 32px;">
-            {% if onboarded == false %}<a href="https://jobply.ai/onboarding?utm_source=customerio&amp;utm_medium=email&amp;utm_campaign=welcome" style="display:inline-block;background:#ffde59;color:#0A0A0A;font:700 16px/1 Geist,-apple-system,Arial,sans-serif;text-decoration:none;padding:16px 32px;border-radius:12px;border:2px solid #0A0A0A;">Finish my profile &rarr;</a>{% endif %}
-            {% if onboarded %}<a href="https://jobply.ai/dashboard?utm_source=customerio&amp;utm_medium=email&amp;utm_campaign=welcome" style="display:inline-block;background:#ffde59;color:#0A0A0A;font:700 16px/1 Geist,-apple-system,Arial,sans-serif;text-decoration:none;padding:16px 32px;border-radius:12px;border:2px solid #0A0A0A;">See my job matches &rarr;</a>{% endif %}
+            {% if onboarded == false %}<a href="https://jobply.ai/onboarding?utm_source=customerio&amp;utm_medium=email&amp;utm_campaign=welcome" target="_blank" rel="noopener" style="display:inline-block;background:#ffde59;color:#0A0A0A;font:700 16px/1 Geist,-apple-system,Arial,sans-serif;text-decoration:none;padding:16px 32px;border-radius:12px;border:2px solid #0A0A0A;">Finish my profile &rarr;</a>{% endif %}
+            {% if onboarded %}<a href="https://jobply.ai/dashboard?utm_source=customerio&amp;utm_medium=email&amp;utm_campaign=welcome" target="_blank" rel="noopener" style="display:inline-block;background:#ffde59;color:#0A0A0A;font:700 16px/1 Geist,-apple-system,Arial,sans-serif;text-decoration:none;padding:16px 32px;border-radius:12px;border:2px solid #0A0A0A;">See my job matches &rarr;</a>{% endif %}
           </td>
         </tr>
 
@@ -152,9 +153,9 @@
             <p style="margin:0 0 8px;font:400 12px/1.6 Geist,-apple-system,Arial,sans-serif;color:#757575;text-align:center;">You're getting this because you created a Jobply account.</p>
             <p style="margin:0 0 8px;font:400 12px/1.6 Geist,-apple-system,Arial,sans-serif;color:#757575;text-align:center;">Jobply LLC · 1020 W Abram St, Arlington, TX 76013</p>
             <p style="margin:0;font:400 12px/1.6 Geist,-apple-system,Arial,sans-serif;color:#757575;text-align:center;">
-              <a href="https://jobply.ai/privacy" style="color:#757575;">Privacy</a> &nbsp;·&nbsp;
-              <a href="https://jobply.ai/terms" style="color:#757575;">Terms</a> &nbsp;·&nbsp;
-              <a href="{% unsubscribe_url %}" style="color:#0A0A0A;font-weight:600;">Unsubscribe</a>
+              <a href="https://jobply.ai/privacy" target="_blank" rel="noopener" style="color:#757575;">Privacy</a> &nbsp;·&nbsp;
+              <a href="https://jobply.ai/terms" target="_blank" rel="noopener" style="color:#757575;">Terms</a> &nbsp;·&nbsp;
+              <a href="{% unsubscribe_url %}" target="_blank" rel="noopener" style="color:#0A0A0A;font-weight:600;">Unsubscribe</a>
             </p>
           </td>
         </tr>
