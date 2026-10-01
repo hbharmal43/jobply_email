@@ -36,6 +36,8 @@ Two email styles:
 
 **How users get into Customer.io:** a Pipelines reverse-ETL sync ("Jobply User Sync", id 8232, source 172138) queries Supabase `public.profiles` **every hour** for rows with `updated_at` newer than the last run, and sends each as an `identify`. Synced fields: `email`, `first_name`, `last_name`, `full_name`, `subscription_tier`, `subscription_status`, `onboarding_completed`, `profile_completion_percentage`, `job_search_status`, `created_at`, `updated_at`. A new profile row triggers the Welcome campaign, so it can arrive up to ~1 hour after signup. New attributes (such as the RDS application count) either go into this query or are sent separately.
 
+**Sending domain:** every email sends as `Jobply <hello@mail.jobply.ai>` (Customer.io identity **3**), with replies to `hasnain@jobply.ai` (identity **1**). `mail.jobply.ai` is Customer.io sending domain 2, with link tracking on the same host (auto-TLS domain 3). It's isolated from the root `jobply.ai`, which runs the team's Zoho inboxes. DNS lives in Cloudflare; the records are in `docs/dns/mail.jobply.ai.zone`. The `mail` CNAME must stay unproxied (grey cloud). New emails use `from_id: 3, reply_to_id: 1`. DMARC is `p=none` for now: move it to `quarantine` after a few clean weeks.
+
 ### Email registry
 
 | Email | Style | Trigger | Customer.io | Status |
