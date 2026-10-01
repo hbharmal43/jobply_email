@@ -1,0 +1,23 @@
+;; mail.jobply.ai: Customer.io sending subdomain for Jobply lifecycle email.
+;; Import in Cloudflare: jobply.ai -> DNS -> Records -> Import and Export -> Import DNS records.
+;; Leave "Proxy imported DNS records" UNCHECKED. The tracking CNAME must stay DNS only (grey cloud).
+;; Generated 2026-10-01 from Customer.io workspace 231518 (sending domain id 2, tracking domain id 3).
+$ORIGIN jobply.ai.
+$TTL 3600
+
+; Return-path (Mailgun) mail exchangers
+cio162927.mail.jobply.ai.                  3600  IN  MX     10 mxa.mailgun.org.
+cio162927.mail.jobply.ai.                  3600  IN  MX     10 mxb.mailgun.org.
+
+; SPF for the return-path domain
+cio162927.mail.jobply.ai.                  3600  IN  TXT    "v=spf1 include:mailgun.org ~all"
+
+; DKIM signing key (split into <=255-character strings, which is standard for long TXT records)
+cio._domainkey.cio162927.mail.jobply.ai.   3600  IN  TXT    "k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3G/wSg/6b8QbPmJULHUKQ7GOSMaBg15IfV25xg3No6V1hOT6JSKHvR9KNh9lbTvWvsbXiwFzPQSwKCDOr1B/TI349qeEQ/ATpBjtts58LtboBYTyf55TNWE9Fz9aV3vj0rHgFZEY2SGO8XHAwP3sYdR3gXC/Lbujhwz/m8tcj2LRcbAPrlYEbr/iv1g4gQ/l5xuk2" "M8/6QEt5n2G2MXsY38yVqxelE9nI14ftjA+p0caogiw3V8lnmgoIu75UQl9ZkWlIPZrMNStjzadUBPcpk3FC+vrpgul4EYVkQECVEg5EUe2z5tN3COtD+6ZDvcyTaIKn/I7PRE8UopqMo+1SQIDAQAB"
+
+; DMARC for the subdomain (monitoring only for now)
+_dmarc.mail.jobply.ai.                     3600  IN  TXT    "v=DMARC1; p=none;"
+
+; Link tracking (Customer.io issues the TLS certificate; must NOT be proxied)
+mail.jobply.ai.                            3600  IN  CNAME  e-trk.customeriomail.com.
+_cio.mail.jobply.ai.                       3600  IN  TXT    "cio-domain-verify=fly.customer.io,01M3V0PJSN9X56G0Q0WJKDVAP7"
