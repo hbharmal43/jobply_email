@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily Digest Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  /* ---------- Preview chrome (NOT part of the email) ---------- */
+  body { margin: 0; background: #EDEDEA; font-family: Geist, -apple-system, 'Segoe UI', Arial, sans-serif; color: #0A0A0A; }
+  .pv { max-width: 600px; margin: 0 auto; padding: 24px 16px 8px; }
+  .pv h1 { font: 800 20px/1.2 Outfit, Arial, sans-serif; margin: 0 0 4px; }
+  .pv p.note { margin: 0 0 16px; font-size: 13px; color: #757575; }
+  .pv-card { background: #fff; border: 1px solid #E5E5E5; border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; }
+  .pv-label { font: 700 11px/1 'JetBrains Mono', monospace; letter-spacing: .08em; text-transform: uppercase; color: #757575; margin-bottom: 10px; }
+  .inbox-row { display: flex; gap: 10px; align-items: baseline; padding: 8px 0; border-top: 1px solid #F0F0F0; font-size: 14px; }
+  .inbox-row:first-of-type { border-top: 0; }
+  .tag { flex: none; font: 700 11px/1 'JetBrains Mono', monospace; background: #ffde59; border-radius: 4px; padding: 4px 6px; }
+  .inbox-row b { font-weight: 600; }
+  .inbox-row span.pre { color: #757575; }
+  .toggle { display: flex; gap: 6px; flex-wrap: wrap; }
+  .toggle button { font: 500 13px Geist, Arial, sans-serif; border: 1px solid #E5E5E5; background: #fff; border-radius: 999px; padding: 7px 12px; cursor: pointer; color: #0A0A0A; }
+  .toggle button[aria-pressed="true"] { background: #0A0A0A; color: #fff; border-color: #0A0A0A; }
+  .logic { font-size: 13px; color: #444; margin: 10px 0 0; line-height: 1.5; }
+  .m { display: none !important; }
+  body.m-streak .m-streak, body.m-interview .m-interview, body.m-first .m-first, body.m-quiet .m-quiet { display: table !important; }
+  @media (max-width: 480px) { .inbox-row { flex-wrap: wrap; } .px { padding-left: 20px !important; padding-right: 20px !important; } .h1 { font-size: 27px !important; } }
+</style>
+</head>
+<body class="m-streak">
+
+<!-- ===================== PREVIEW CONTROLS ===================== -->
+<div class="pv">
+  <h1>Daily job digest: preview</h1>
+  <p class="note">Sample recipient: Sarah, product/data roles. Sample jobs. Nothing here is in Customer.io yet.</p>
+
+  <div class="pv-card">
+    <div class="pv-label">Subject line A/B test (50 / 50)</div>
+    <div class="inbox-row"><span class="tag">A</span><div><b>Senior Data Analyst at Stripe + 4 more matches for you</b> <span class="pre">· Your 5 picks for Tuesday, Sep 29.</span></div></div>
+    <div class="inbox-row"><span class="tag">B</span><div><b>5 new jobs matched to you today</b> <span class="pre">· Your 5 picks for Tuesday, Sep 29.</span></div></div>
+    <p class="logic">Same body for both. Winner judged on clicks as well as opens. From: <b>Jobply &lt;hello@jobply.ai&gt;</b>, sent daily at 9:00 AM Central.</p>
+  </div>
+
+  <div class="pv-card">
+    <div class="pv-label">Headline: a different one every day (<span id="hcount"></span>)</div>
+    <div class="toggle"><button type="button" id="hprev">&larr; Prev</button><button type="button" id="hnext">Next &rarr;</button></div>
+    <p class="logic">Rotates through the whole pool so nobody sees the same line two days running. No first name: the name is dropped cleanly.</p>
+  </div>
+
+  <div class="pv-card">
+    <div class="pv-label">Motivation strip: based on this user's applications (RDS)</div>
+    <div class="toggle" role="group" aria-label="Motivation state" id="motiv">
+      <button type="button" data-state="streak" aria-pressed="true">Applied this week</button>
+      <button type="button" data-state="interview" aria-pressed="false">Has interviews</button>
+      <button type="button" data-state="first" aria-pressed="false">Never applied</button>
+      <button type="button" data-state="quiet" aria-pressed="false">Quiet week</button>
+    </div>
+    <p class="logic">Every "Ply this job" button opens that job inside Jobply (<code>/dashboard/jobs/{id}</code>) tagged <code>utm_content=job_1…job_5</code>, so we can see exactly which jobs get clicked.</p>
+  </div>
+</div>
+
+<!-- ===================== EMAIL ===================== -->
+<div style="display:none;max-height:0;overflow:hidden;">Your 5 picks for Tuesday, Sep 29.</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FAFAF7;">
+  <tr>
+    <td align="center" style="padding:16px 12px 40px;">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#FFFFFF;border:1px solid #E5E5E5;border-radius:16px;overflow:hidden;">
+
+        <tr><td style="height:6px;background:#ffde59;font-size:0;line-height:0;">&nbsp;</td></tr>
+
+        <!-- Header -->
+        <tr>
+          <td class="px" style="padding:26px 36px 0;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td valign="middle"><a href="https://jobply.ai" target="_blank" rel="noopener" style="text-decoration:none;"><img src="https://userimg-assets.customeriomail.com/images/client-env-231518/01M2C665JT1WPWAV8PH60EJ9N3.png" width="96" height="37" alt="jobply" style="display:block;width:96px;height:auto;border:0;font:900 26px/37px Outfit,Arial,sans-serif;color:#0A0A0A;"></a></td>
+                <td valign="middle" align="right" style="font:700 11px/1 'JetBrains Mono',Menlo,Consolas,monospace;letter-spacing:.1em;text-transform:uppercase;color:#757575;">Tue · Sep 29</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Hero -->
+        <tr>
+          <td class="px" style="padding:26px 36px 6px;">
+            <p style="margin:0 0 12px;font:700 12px/1 'JetBrains Mono',Menlo,Consolas,monospace;letter-spacing:.12em;text-transform:uppercase;color:#757575;">
+              <span style="display:inline-block;width:8px;height:8px;background:#ffde59;border-radius:50%;margin-right:8px;vertical-align:1px;"></span>Your daily matches
+            </p>
+            <h1 class="h1" id="headline" style="margin:0 0 10px;font:800 31px/1.18 Outfit,Arial,Helvetica,sans-serif;color:#0A0A0A;letter-spacing:-.01em;"></h1>
+            <p style="margin:0;font:400 15px/1.6 Geist,-apple-system,'Segoe UI',Arial,sans-serif;color:#555555;">5 fresh roles that fit you. <b style="color:#0A0A0A;">You miss 100% of the jobs you don't ply.</b></p>
+          </td>
+        </tr>
+
+        <!-- Motivation strip (one of four, chosen by application counts) -->
+        <tr>
+          <td class="px" style="padding:18px 36px 6px;">
+            <table class="m m-streak" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FFF9E6;border:1px solid #FBE9A6;border-radius:12px;">
+              <tr>
+                <td width="64" align="center" valign="middle" style="padding:14px 0 14px 14px;font:700 28px/1 'JetBrains Mono',Menlo,Consolas,monospace;color:#0A0A0A;">4</td>
+                <td valign="middle" style="padding:14px 16px 14px 12px;font:500 14px/1.45 Geist,-apple-system,Arial,sans-serif;color:#333333;"><b style="color:#0A0A0A;">plies this week.</b> Keep the streak going. One more today?</td>
+              </tr>
+            </table>
+            <table class="m m-interview" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#DCFCE7;border:1px solid #BBF7D0;border-radius:12px;">
+              <tr>
+                <td width="64" align="center" valign="middle" style="padding:14px 0 14px 14px;font:700 28px/1 'JetBrains Mono',Menlo,Consolas,monospace;color:#15803D;">2</td>
+                <td valign="middle" style="padding:14px 16px 14px 12px;font:500 14px/1.45 Geist,-apple-system,Arial,sans-serif;color:#14532D;"><b>🎉 of your plies are at the interview stage.</b> Nice work. Keep a few more in the pipeline.</td>
+              </tr>
+            </table>
+            <table class="m m-first" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FFF9E6;border:1px solid #FBE9A6;border-radius:12px;">
+              <tr>
+                <td width="64" align="center" valign="middle" style="padding:14px 0 14px 14px;font:26px/1 Arial,sans-serif;">🚀</td>
+                <td valign="middle" style="padding:14px 16px 14px 12px;font:500 14px/1.45 Geist,-apple-system,Arial,sans-serif;color:#333333;"><b style="color:#0A0A0A;">Your first ply is one click away.</b> Pick a job below and hit Autofill.</td>
+              </tr>
+            </table>
+            <table class="m m-quiet" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F5F5F5;border:1px solid #E5E5E5;border-radius:12px;">
+              <tr>
+                <td width="64" align="center" valign="middle" style="padding:14px 0 14px 14px;font:26px/1 Arial,sans-serif;">☕</td>
+                <td valign="middle" style="padding:14px 16px 14px 12px;font:500 14px/1.45 Geist,-apple-system,Arial,sans-serif;color:#333333;"><b style="color:#0A0A0A;">Quiet week?</b> One ply today keeps your search moving.</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Daily GIF -->
+        <tr>
+          <td class="px" style="padding:14px 36px 2px;">
+            <img src="assets/progress.gif" width="528" alt="Every application moves you from Apply to Interview to Offer. Keep going." style="display:block;width:100%;max-width:528px;height:auto;border:0;border-radius:12px;">
+          </td>
+        </tr>
+
+        <!-- Job cards -->
+        <tr>
+          <td class="px" style="padding:14px 36px 4px;" id="jobs"></td>
+        </tr>
+
+        <!-- More matches -->
+        <tr>
+          <td align="center" class="px" style="padding:14px 36px 30px;">
+            <a href="https://jobply.ai/dashboard/jobs/recommended?utm_source=customerio&amp;utm_medium=email&amp;utm_campaign=daily_digest&amp;utm_content=see_more" target="_blank" rel="noopener" style="display:inline-block;background:#0A0A0A;color:#FFFFFF;font:700 15px/1 Geist,-apple-system,Arial,sans-serif;text-decoration:none;padding:15px 26px;border-radius:12px;">See 5 more matches in Jobply &rarr;</a>
+            <p style="margin:14px 0 0;font:400 12px/1.5 Geist,-apple-system,Arial,sans-serif;color:#757575;">Matches get sharper as you save, dismiss and apply to jobs.</p>
+          </td>
+        </tr>
+
+        <!-- One-tap check-in -->
+        <tr>
+          <td class="px" style="padding:0 36px 30px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px dashed #D4D4D4;border-radius:14px;">
+              <tr><td align="center" style="padding:18px 12px 6px;font:800 16px/1.3 Outfit,Arial,sans-serif;color:#0A0A0A;">How's the job hunt feeling today?</td></tr>
+              <tr><td align="center" style="padding:6px 8px 18px;">
+                <a href="#mood_rough" style="display:inline-block;margin:4px;padding:10px 14px;border:1px solid #E5E5E5;border-radius:999px;font:600 14px/1 Geist,-apple-system,Arial,sans-serif;color:#0A0A0A;text-decoration:none;">😩 Rough</a>
+                <a href="#mood_okay" style="display:inline-block;margin:4px;padding:10px 14px;border:1px solid #E5E5E5;border-radius:999px;font:600 14px/1 Geist,-apple-system,Arial,sans-serif;color:#0A0A0A;text-decoration:none;">😐 Meh</a>
+                <a href="#mood_fire" style="display:inline-block;margin:4px;padding:10px 14px;border:1px solid #E5E5E5;border-radius:999px;font:600 14px/1 Geist,-apple-system,Arial,sans-serif;color:#0A0A0A;text-decoration:none;">🔥 On fire</a>
+              </td></tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td class="px" style="padding:22px 36px 26px;background:#FAFAF7;border-top:1px solid #E5E5E5;">
+            <p style="margin:0 0 8px;font:400 12px/1.6 Geist,-apple-system,Arial,sans-serif;color:#757575;text-align:center;">You're getting this because you have a Jobply account. One email a day, only when we have strong matches.</p>
+            <p style="margin:0 0 8px;font:400 12px/1.6 Geist,-apple-system,Arial,sans-serif;color:#757575;text-align:center;">Jobply LLC · 1020 W Abram St, Arlington, TX 76013</p>
+            <p style="margin:0;font:400 12px/1.6 Geist,-apple-system,Arial,sans-serif;color:#757575;text-align:center;">
+              <a href="https://jobply.ai/privacy" target="_blank" rel="noopener" style="color:#757575;">Privacy</a> &nbsp;·&nbsp;
+              <a href="https://jobply.ai/terms" target="_blank" rel="noopener" style="color:#757575;">Terms</a> &nbsp;·&nbsp;
+              <a href="#unsubscribe" style="color:#0A0A0A;font-weight:600;">Unsubscribe</a>
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
+
+<script>
+  // Sample data shaped exactly like the daily_job_matches event payload.
+  var jobs = [
+    { rank: 1, title: 'Senior Data Analyst', company: 'Stripe', location: 'New York, NY', work_arrangement: 'Hybrid', salary: '$120,000 - $150,000', match_pct: 92 },
+    { rank: 2, title: 'Product Analyst', company: 'Airbnb', location: 'San Francisco, CA', work_arrangement: 'Remote', salary: '$115,000 - $140,000', match_pct: 89 },
+    { rank: 3, title: 'Business Intelligence Analyst', company: 'Capital One', location: 'Plano, TX', work_arrangement: 'Onsite', salary: null, match_pct: 86 },
+    { rank: 4, title: 'Analytics Engineer', company: 'Databricks', location: 'Remote, US', work_arrangement: 'Remote', salary: '$130,000 - $165,000', match_pct: 84 },
+    { rank: 5, title: 'Data Analyst II', company: 'Target', location: 'Minneapolis, MN', work_arrangement: null, salary: 'From $95,000', match_pct: 81 }
+  ];
+  var F = "Geist,-apple-system,Arial,sans-serif";
+  var html = jobs.map(function (j) {
+    var url = 'https://jobply.ai/dashboard/jobs/JOB_ID?utm_source=customerio&utm_medium=email&utm_campaign=daily_digest&utm_content=job_' + j.rank;
+    var badges = '';
+    if (j.work_arrangement) badges += '<span style="display:inline-block;background:#F5F5F5;color:#404040;padding:4px 9px;border-radius:999px;font:600 11px/14px ' + F + ';margin:6px 6px 0 0;">' + j.work_arrangement + '</span>';
+    if (j.salary) badges += '<span style="display:inline-block;background:#DCFCE7;color:#15803D;padding:4px 9px;border-radius:999px;font:600 11px/14px ' + F + ';margin:6px 6px 0 0;">' + j.salary + '</span>';
+    return '' +
+      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #E5E5E5;border-radius:14px;margin:0 0 12px;border-collapse:separate;">' +
+      '<tr><td style="padding:18px 18px 16px;">' +
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>' +
+          '<td width="46" valign="top"><div style="width:36px;height:36px;border-radius:10px;background:#F5F5F5;text-align:center;font:800 15px/36px Outfit,Arial,sans-serif;color:#0A0A0A;">' + j.company.charAt(0) + '</div></td>' +
+          '<td valign="top">' +
+            '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>' +
+              '<td valign="top" style="font:700 11px/1.3 \'JetBrains Mono\',Menlo,monospace;letter-spacing:.06em;text-transform:uppercase;color:#757575;">' + j.company + '</td>' +
+              '<td valign="top" align="right" style="white-space:nowrap;"><span style="display:inline-block;background:#FFF9E6;border:1px solid #FBE9A6;color:#0A0A0A;padding:3px 8px;border-radius:999px;font:700 11px/14px \'JetBrains Mono\',Menlo,monospace;">' + j.match_pct + '% match</span></td>' +
+            '</tr></table>' +
+            '<a href="' + url + '" target="_blank" rel="noopener" style="display:block;margin:6px 0 2px;font:800 18px/1.3 Outfit,Arial,Helvetica,sans-serif;color:#0A0A0A;text-decoration:none;">' + j.title + '</a>' +
+            '<div style="font:400 13px/1.5 ' + F + ';color:#555555;">' + j.location + '</div>' +
+            (badges ? '<div>' + badges + '</div>' : '') +
+            '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;"><tr><td style="border-radius:10px;background:#ffde59;border:2px solid #0A0A0A;">' +
+              '<a href="' + url + '" target="_blank" rel="noopener" style="display:inline-block;padding:9px 16px;font:700 13px/1 ' + F + ';color:#0A0A0A;text-decoration:none;">Ply this job &rarr;</a>' +
+            '</td></tr></table>' +
+          '</td>' +
+        '</tr></table>' +
+      '</td></tr></table>';
+  }).join('');
+  document.getElementById('jobs').innerHTML = html;
+
+  // Headline pool. {n} = first name (yellow highlighter). Order is mixed on purpose.
+  var mark = function (t) { return '<span style="background:linear-gradient(180deg,transparent 60%,#ffde59 60%);padding:0 3px;">' + t + '</span>'; };
+  var pool = [
+    "{n}, did you ply today? 👀",
+    "Job market's rough. You're tougher, {n} 💪",
+    "We know it's brutal out there, {n}. 10 more plies this week. You've got this.",
+    "{n}, 1 ply before lunch? 🍜",
+    "5 plies today, {n}. Future you says thanks 🙏",
+    "Rejections are just redirects, {n}. Ply again 🔁",
+    "Your offer letter won't ply itself, {n} 😤",
+    "{n}, your next job is in here. Ply it 🎯",
+    "Main character energy only, {n}. Ply it ✨",
+    "{n}, the market's tough. Consistency is tougher 📈",
+    "Not every ply lands. Every ply counts, {n}.",
+    "{n}, new week. Offer letter loading ⏳",
+    "Weekend drop: 5 fresh roles to ply, {n} 🔥",
+    "Just a few more plies, {n}. That's how it happens 🍀"
+  ];
+  var hi = 0;
+  function showHeadline() {
+    document.getElementById('headline').innerHTML = pool[hi].replace('{n}', mark('Sarah'));
+    document.getElementById('hcount').textContent = (hi + 1) + ' of ' + pool.length;
+  }
+  document.getElementById('hprev').onclick = function () { hi = (hi - 1 + pool.length) % pool.length; showHeadline(); };
+  document.getElementById('hnext').onclick = function () { hi = (hi + 1) % pool.length; showHeadline(); };
+  showHeadline();
+
+  document.querySelectorAll('#motiv button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.body.className = 'm-' + btn.dataset.state;
+      document.querySelectorAll('#motiv button').forEach(function (b) { b.setAttribute('aria-pressed', String(b === btn)); });
+    });
+  });
+</script>
+</body>
+</html>

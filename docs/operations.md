@@ -14,32 +14,40 @@ handler exits immediately (`PRODUCTION_MODE=false`).
    9:00 AM `America/Chicago` (follows daylight-saving time).
 2. It pulls up to `recommendationScanBatchSize` candidates from Supabase
    (`get_job_recommendation_candidates`).
-3. For each candidate it matches jobs on RDS (`recommend_jobs_aws`) and records
+3. For each candidate it matches jobs on Typesense (the dashboard's "For You"
+   search) and records
    a deduplicated `job_recommendations` row in `email_internal.email_jobs`
    (dedupe key `job_recommendations:<user>:<UTC date>`).
 
 ## Data sources
 
-Job listings live on AWS RDS, not Supabase. The recommendation scan therefore
-spans two databases:
+Matching moved from embeddings to Typesense on 2026-10-20, following the
+website's dashboard feed (`jobply_website/lib/recommendations/typesense-feed.ts`,
+ported as `lambdas/recommendation-dispatcher/feed.ts`). The scan reads three
+sources:
 
-- **Supabase** — candidate profiles, `user_embeddings`, `profiles.years_of_experience`,
-  and all of `email_internal`. Reached over PostgREST with the service role key.
-- **AWS RDS** — `recommend_jobs_aws` and `scraped_jobs`. Reached over the
-  Postgres wire protocol with `pg`.
+- **Supabase**: candidate profiles (`title`, `years_of_experience`,
+  `visa_sponsorship_required`), `job_preferences.interested_roles`, and all of
+  `email_internal`. Reached over PostgREST with the service role key; batched
+  in chunks of 50 before the per-user loop.
+- **AWS RDS**: `applications` (motivation counts and already-applied jobs).
+  Reached over the Postgres wire protocol with `pg`.
+- **Typesense** (`search.jobply.ai`, `jobs` alias): one `multi_search` per user
+  with a title search per target role (max 4), experience filter, 20% visa
+  sponsor share for users who need it, and only jobs posted in the last
+  `EMAIL_MAX_AGE_DAYS` (3) so the email doesn't repeat itself day to day. The
+  index holds only active jobs from the last 15 days, so links stay live.
 
-`recommend_jobs_aws` does not look the user's vector up itself — unlike the
-Supabase `recommend_jobs_for_user_v3` it replaced — so the dispatcher reads each
-embedding from Supabase and passes it in. Embeddings and years-of-experience are
-batched in chunks of 50 before the per-user loop.
+Users with no target roles and no profile title are skipped for the day.
 
-The RDS connection URL is the `awsRdsUrl` field on the
-`jobply-email/<env>/supabase` secret. RDS is reachable over the public internet,
-so the Lambda needs no VPC attachment.
+Secret fields on `jobply-email/<env>/supabase`: `awsRdsUrl` (RDS, public, no VPC
+needed), `typesenseSearchKey` (the website's search-only key) and an optional
+`typesenseUrl` (default `https://search.jobply.ai`).
 
-If the RDS query fails for a user, that user is skipped and retried on the next
-run — there is deliberately no fallback to the Supabase matcher, whose job
-tables are now stale.
+If the Typesense search fails for a user, that user is skipped and retried on
+the next run. There is deliberately no fallback to the old embedding matcher.
+If the RDS applications query fails, the whole run stops, because the digest
+could otherwise recommend jobs the user already applied to.
 
 Candidate scans are bounded by `recommendationScanBatchSize`, but they do not
 restart from the same first page. Candidates with no matches are recorded in

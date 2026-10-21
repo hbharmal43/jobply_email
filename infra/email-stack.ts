@@ -36,8 +36,9 @@ export interface JobplyEmailStackProps extends cdk.StackProps {
  *   EventBridge Scheduler (9:00 AM America/Chicago)
  *           │
  *           ▼
- *   Recommendation dispatcher Lambda ──▶ Supabase (candidates, embeddings, email_jobs)
- *                                    ──▶ AWS RDS (recommend_jobs_aws, scraped_jobs)
+ *   Recommendation dispatcher Lambda ──▶ Supabase (candidates, profiles, job_preferences, email_jobs)
+ *                                    ──▶ AWS RDS (applications)
+ *                                    ──▶ Typesense search.jobply.ai (job matching)
  *
  * Email delivery is handled by Customer.io; the SES/SQS send pipeline and
  * SES feedback ingestion were removed on 2026-09-29.
@@ -58,14 +59,14 @@ export class JobplyEmailStack extends cdk.Stack {
 
     const recommendationDispatcherFn = new NodejsFunction(this, 'RecommendationDispatcherFunction', {
       functionName: `jobply-email-${props.environmentName}-recommendation-dispatcher`,
-      description: 'Builds the daily personalized job-recommendation digest',
+      description: 'Sends the daily job digest to users for whom it is 9 AM local (runs hourly)',
       entry: 'lambdas/recommendation-dispatcher/handler.ts',
       handler: 'handler',
       // Node 22+ required: @supabase/supabase-js needs native WebSocket
       // (unavailable in the Node 20 Lambda runtime).
       runtime: lambda.Runtime.NODEJS_22_X,
       memorySize: 256,
-      timeout: cdk.Duration.minutes(5),
+      timeout: cdk.Duration.minutes(10),
       reservedConcurrentExecutions: 1,
       logRetention: logs.RetentionDays.ONE_MONTH,
       environment: {
@@ -91,12 +92,13 @@ export class JobplyEmailStack extends cdk.Stack {
     });
     recommendationDispatcherFn.grantInvoke(recommendationSchedulerRole);
 
-    // EventBridge Scheduler evaluates the cron expression in the configured
-    // timezone, including daylight-saving time.
+    // Hourly on the hour: each run emails the users for whom it's 9 AM local
+    // (lambdas/recommendation-dispatcher/timezone.ts), so everyone gets theirs
+    // at 9 their time. Half-hour zones (India) land at 9:30.
     new scheduler.CfnSchedule(this, 'DailyRecommendationSchedule', {
       name: `jobply-email-${props.environmentName}-daily-recommendations`,
-      description: 'Runs personalized job recommendations daily at 9:00 AM Central',
-      scheduleExpression: 'cron(0 9 * * ? *)',
+      description: 'Hourly: daily job digest for users at 9 AM local time',
+      scheduleExpression: 'cron(0 * * * ? *)',
       scheduleExpressionTimezone: props.recommendationScheduleTimezone ?? 'America/Chicago',
       state: props.dispatcherScheduleEnabled ? 'ENABLED' : 'DISABLED',
       flexibleTimeWindow: { mode: 'OFF' },
@@ -104,7 +106,8 @@ export class JobplyEmailStack extends cdk.Stack {
         arn: recommendationDispatcherFn.functionArn,
         roleArn: recommendationSchedulerRole.roleArn,
         retryPolicy: {
-          maximumEventAgeInSeconds: 3600,
+          // A retry after the hour would find nobody at 9 AM local; keep it inside the hour.
+          maximumEventAgeInSeconds: 900,
           maximumRetryAttempts: 2,
         },
       },

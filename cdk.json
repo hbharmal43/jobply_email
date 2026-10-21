@@ -6,7 +6,7 @@
   },
   "context": {
     "enableDispatch": "false",
-    "recommendationScanBatchSize": "500",
+    "recommendationScanBatchSize": "2000",
     "recommendationScheduleTimezone": "America/Chicago",
     "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
     "@aws-cdk/core:checkSecretUsage": true,

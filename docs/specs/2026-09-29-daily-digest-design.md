@@ -9,8 +9,8 @@
 ```
 Scheduler 9:00 AM America/Chicago
   → recommendation dispatcher Lambda
-      1. candidates (Supabase) → top 10 matches per user (RDS recommend_jobs_aws)
-      2. drop jobs the user already applied to (is_applied from recommend_jobs_aws); freshness is
+      1. candidates (Supabase) → top 15 matches per user (Typesense "For You" search, jobs posted in the last 3 days; replaced embeddings on 2026-10-20)
+      2. drop jobs the user already applied to (RDS applications, by id and posting URL); historical note: under embeddings, freshness was
          already built into its score (similarity × 7-day half-life decay), so there's no extra dedupe or cutoff
       3. skip the user if fewer than 3 jobs remain
       4. application counts from RDS `applications`: total, last 7 days, status = interview

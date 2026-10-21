@@ -63,14 +63,15 @@ npx cdk deploy -c env=development -c enableDispatch=false --require-approval nev
 
 ```
 Scheduler (9 AM America/Chicago) ─▶ recommendation dispatcher Lambda (lambdas/recommendation-dispatcher/handler.ts)
-   Supabase: get_job_recommendation_candidates, user_embeddings, profiles.years_of_experience
-   RDS:      recommend_jobs_aws ⨝ scraped_jobs (lambdas/recommendation-dispatcher/aws-rds.ts)
+   Supabase: get_job_recommendation_candidates, profiles, job_preferences.interested_roles
+   RDS:      applications (counts + already-applied; lambdas/recommendation-dispatcher/aws-rds.ts)
+   Typesense: search.jobply.ai multi_search, one title search per target role (feed.ts)
    Supabase: schedule_email_job → email_internal.email_jobs (dedupe key job_recommendations:<user>:<UTC date>)
 ```
 
-- **Two databases.** Profiles and embeddings are in Supabase; job listings are on RDS. The dispatcher reads embeddings from Supabase and passes them to `recommend_jobs_aws`. There is deliberately no fallback to the stale Supabase matcher.
+- **Matching is Typesense, not embeddings** (since 2026-10-20). `feed.ts` ports the website's "For You" feed (`jobply_website/lib/recommendations/typesense-feed.ts`); keep the two in sync, along with `role-categories.ts` and `applied-jobs.ts`. The email only takes jobs posted in the last 3 days. There is deliberately no fallback to the embedding matcher.
 - **Delivery is being moved to Customer.io** (decision 2026-09-29): the dispatcher will send each user a `daily_job_matches` Track API event carrying their jobs, and a Customer.io campaign renders the email. Until then the schedule stays disabled.
-- **Secrets:** Secrets Manager `jobply-email/<env>/supabase` holds `{ url, serviceKey, awsRdsUrl }` (plus a legacy `emailUnsubscribeSecret`), created outside CDK.
+- **Secrets:** Secrets Manager `jobply-email/<env>/supabase` holds `{ url, serviceKey, awsRdsUrl, cioSiteId, cioApiKey, typesenseSearchKey }` (optional `typesenseUrl`, plus a legacy `emailUnsubscribeSecret`), created outside CDK.
 - **Application counts** live on Amazon RDS (source of truth), not Supabase `public.applications`.
 
 ## Gotchas

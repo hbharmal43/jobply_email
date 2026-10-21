@@ -1,26 +1,17 @@
 /**
  * AWS RDS (Postgres) access for the job-recommendations journey.
  *
- * Job listings moved out of Supabase onto RDS, so `recommend_jobs_aws` — the
- * replacement for Supabase's `recommend_jobs_for_user_v3` — lives on a
- * different database than `profiles` and `user_embeddings`. This module owns
- * that second connection; everything else in the dispatcher still talks to
- * Supabase.
+ * Applications live on RDS (the source of truth), not Supabase. The dispatcher
+ * reads them here for the motivation counts and to keep jobs the user already
+ * applied to out of the digest. Matching itself runs on Typesense (./feed.ts).
  *
- * Ported from jobply_website/lib/aws-rds.ts, with three deliberate changes:
- *   - credentials come from the Secrets Manager secret this stack already
- *     reads, never from plaintext env vars
- *   - the projection is trimmed to the columns the email template renders,
- *     because every selected column is snapshotted into email_jobs.payload
- *     (description_text in particular would bloat that JSONB enormously)
- *   - results are explicitly ordered, see recommendJobsFromAws
+ * Connection handling is ported from jobply_website/lib/aws-rds.ts, except
+ * credentials come from the Secrets Manager secret this stack already reads.
  */
 
 import { Pool } from 'pg';
+import type { AppliedRow } from './applied-jobs';
 import type { ApplicationCounts } from './digest';
-
-/** Matches the website's AWS_RDS_JOBS_TABLE override. */
-const JOBS_TABLE = process.env.AWS_RDS_JOBS_TABLE ?? 'scraped_jobs';
 
 interface DbConfig {
   host: string;
@@ -104,80 +95,6 @@ export function getRdsPool(connectionUrl: string): Pool {
   return cachedPool;
 }
 
-/**
- * One row per recommended job. Field names intentionally match what
- * templates/job-recommendations.ts already reads, so the template needs no
- * changes — see its `job.job_title || job.title` style accessors.
- */
-export interface RecommendedJobRow {
-  id: string;
-  job_title: string | null;
-  company_name: string | null;
-  location: string | null;
-  job_url: string | null;
-  ai_work_arrangement: string | null;
-  salary_min: number | string | null;
-  salary_max: number | string | null;
-  salary_currency: string | null;
-  match_score: number | string | null;
-  /** True when the user already has an application for this job. */
-  is_applied: boolean | null;
-}
-
-export interface RecommendJobsParams {
-  userId: string;
-  /** pgvector literal, e.g. "[0.12,0.34,...]". */
-  embedding: string;
-  limit: number;
-  yearsOfExperience: number | null;
-}
-
-/**
- * `recommend_jobs_aws` returns only (job_id, match_score, match_explanation),
- * so the job columns come from a join — same shape the website uses.
- *
- * Two differences from the website's copy of this query:
- *   - an explicit ORDER BY. A join does not preserve a set-returning
- *     function's output order, so without it the "top 10" arrive unranked —
- *     which matters here because the email numbers them 01..10.
- *   - is_active is re-checked, so a digest can't link to a delisted posting
- *     between the nightly scan and the user opening the mail.
- */
-export async function recommendJobsFromAws(
-  pool: Pool,
-  params: RecommendJobsParams,
-): Promise<RecommendedJobRow[]> {
-  const sql = `
-    SELECT
-      j.id,
-      j.job_title,
-      j.company_name,
-      j.location,
-      j.job_url,
-      j.ai_work_arrangement,
-      j.salary_min,
-      j.salary_max,
-      j.salary_currency,
-      r.match_score,
-      r.is_applied
-    FROM recommend_jobs_aws($1, $2::uuid, $3, $4, $5) r
-    JOIN ${JOBS_TABLE} j ON r.job_id = j.id
-    WHERE j.is_active = true
-    ORDER BY r.match_score DESC NULLS LAST
-    LIMIT $3;
-  `;
-
-  const result = await pool.query<RecommendedJobRow>(sql, [
-    params.embedding,
-    params.userId,
-    params.limit,
-    'best',
-    params.yearsOfExperience,
-  ]);
-
-  return result.rows;
-}
-
 /** Application counts per user from RDS `applications` (the source of truth). */
 export async function getApplicationCounts(
   pool: Pool,
@@ -208,4 +125,30 @@ export async function getApplicationCounts(
     counts.set(r.user_id, { total: r.total, last7d: r.last7d, interviews: r.interviews });
   }
   return counts;
+}
+
+/**
+ * Each user's applications, most recent first (the order MAX_EXCLUDED_IDS relies on).
+ * Throws on failure: without them the digest could recommend jobs already applied to.
+ */
+export async function getAppliedRows(
+  pool: Pool,
+  userIds: string[],
+): Promise<Map<string, AppliedRow[]>> {
+  const rows = new Map<string, AppliedRow[]>();
+  if (userIds.length === 0) return rows;
+
+  const result = await pool.query<AppliedRow & { user_id: string }>(
+    `SELECT user_id::text AS user_id, job_id::text AS job_id, company_url, linkedin_job_id
+       FROM applications
+      WHERE user_id::text = ANY($1::text[])
+      ORDER BY applied_date DESC NULLS LAST, created_at DESC`,
+    [userIds],
+  );
+  for (const { user_id, ...row } of result.rows) {
+    const list = rows.get(user_id);
+    if (list) list.push(row);
+    else rows.set(user_id, [row]);
+  }
+  return rows;
 }

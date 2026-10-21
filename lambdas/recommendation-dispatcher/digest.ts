@@ -1,11 +1,10 @@
 /**
  * Pure builder for the `daily_job_matches` Customer.io event payload.
  *
- * recommend_jobs_aws already ranks by similarity × freshness decay (7-day
- * half-life) on a 0–100 scale, so there is no extra dedupe or score cutoff
- * here — only jobs the user already applied to are dropped.
+ * Jobs arrive already ranked by ./feed.ts with applied jobs removed, so this
+ * only trims, formats and adds the rotating copy indexes.
  */
-import type { RecommendedJobRow } from './aws-rds';
+import type { DigestSourceJob } from './feed';
 
 export const EMAIL_JOB_COUNT = 5;
 export const MIN_JOBS_TO_SEND = 3;
@@ -21,7 +20,6 @@ export interface DigestJob {
   location: string | null;
   work_arrangement: string | null;
   salary: string | null;
-  match_pct: number;
   url: string;
 }
 
@@ -44,18 +42,6 @@ export interface DigestPayload {
   subject_a: number;
   /** 0-6: which "Nudge" subject line (variant B) to use. Customer.io's `modulo` compares unreliably, so the template uses case/when on these. */
   subject_b: number;
-}
-
-/**
- * recommend_jobs_aws scores are 0–100 (similarity × freshness decay) and may
- * arrive as numeric strings from pg. A heavily decayed score below 1 is still
- * on the 0–100 scale, so it is never rescaled as a fraction.
- */
-export function toMatchPct(score: number | string | null): number | null {
-  if (score === null || score === undefined || score === '') return null;
-  const n = typeof score === 'string' ? Number(score) : score;
-  if (!Number.isFinite(n)) return null;
-  return Math.min(100, Math.max(0, Math.round(n)));
 }
 
 const CURRENCY: Record<string, string> = { USD: '$', $: '$', EUR: '€', '€': '€', GBP: '£', '£': '£' };
@@ -94,9 +80,10 @@ export function jobUrl(id: string, rank: number): string {
   return `https://jobply.ai/dashboard/jobs/${encodeURIComponent(id)}?utm_source=customerio&utm_medium=email&utm_campaign=daily_digest&utm_content=job_${rank}`;
 }
 
-export function dateLabel(now: Date): string {
+/** The user's local date, e.g. "Tuesday, Oct 20". */
+export function dateLabel(now: Date, timeZone = 'America/Chicago'): string {
   const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Chicago', weekday: 'long', month: 'short', day: 'numeric',
+    timeZone, weekday: 'long', month: 'short', day: 'numeric',
   }).formatToParts(now);
   const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
   return `${get('weekday')}, ${get('month')} ${get('day')}`;
@@ -133,23 +120,20 @@ function workArrangementLabel(value: string | null | undefined): string | null {
 
 export function buildDigest(input: {
   userId: string;
-  jobs: RecommendedJobRow[];
+  jobs: DigestSourceJob[];
   counts: ApplicationCounts;
   now: Date;
+  /** IANA zone for date_label; defaults to America/Chicago. */
+  timeZone?: string;
 }): DigestPayload | null {
-  const eligible = input.jobs
-    .filter((job) => !job.is_applied)
-    .map((job) => ({ job, pct: toMatchPct(job.match_score) }))
-    .filter((x): x is { job: RecommendedJobRow; pct: number } => x.pct !== null);
+  if (input.jobs.length < MIN_JOBS_TO_SEND) return null;
 
-  if (eligible.length < MIN_JOBS_TO_SEND) return null;
-
-  const top = eligible.slice(0, EMAIL_JOB_COUNT);
+  const top = input.jobs.slice(0, EMAIL_JOB_COUNT);
 
   let topAmount = 0;
   let topSalary: string | null = null;
   let topSalaryTitle: string | null = null;
-  for (const { job } of top) {
+  for (const job of top) {
     const amount = Number(job.salary_max ?? job.salary_min ?? 0);
     const label = shortSalary(job.salary_max ?? job.salary_min, job.salary_currency);
     if (label && amount > topAmount) {
@@ -159,7 +143,7 @@ export function buildDigest(input: {
     }
   }
 
-  const jobs: DigestJob[] = top.map(({ job, pct }, i) => ({
+  const jobs: DigestJob[] = top.map((job, i) => ({
     id: String(job.id),
     rank: i + 1,
     title: clean(job.job_title) ?? 'Open role',
@@ -167,17 +151,16 @@ export function buildDigest(input: {
     location: clean(job.location),
     work_arrangement: workArrangementLabel(job.ai_work_arrangement),
     salary: formatSalary(job.salary_min, job.salary_max, job.salary_currency),
-    match_pct: pct,
     url: jobUrl(String(job.id), i + 1),
   }));
 
   const subjectIdx = subjectIndex(input.userId, input.now);
 
   return {
-    date_label: dateLabel(input.now),
+    date_label: dateLabel(input.now, input.timeZone),
     jobs,
     job_count: jobs.length,
-    more_count: eligible.length - jobs.length,
+    more_count: input.jobs.length - jobs.length,
     applied_total: input.counts.total,
     applied_7d: input.counts.last7d,
     interviews: input.counts.interviews,

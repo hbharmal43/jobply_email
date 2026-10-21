@@ -1,29 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  toMatchPct, formatSalary, jobUrl, dateLabel, headlineIndex, buildDigest, HEADLINE_COUNT, shortSalary, subjectIndex,
+  formatSalary, jobUrl, dateLabel, headlineIndex, buildDigest, HEADLINE_COUNT, shortSalary, subjectIndex,
 } from './digest';
-import type { RecommendedJobRow } from './aws-rds';
+import type { DigestSourceJob } from './feed';
 
-const row = (id: string, score: number | string | null, extra: Partial<RecommendedJobRow> = {}): RecommendedJobRow => ({
+const row = (id: string, extra: Partial<DigestSourceJob> = {}): DigestSourceJob => ({
   id, job_title: `Title ${id}`, company_name: `Co ${id}`, location: 'Austin, TX', job_url: null,
-  ai_work_arrangement: 'Remote', salary_min: null, salary_max: null, salary_currency: null,
-  match_score: score, is_applied: false, ...extra,
+  ai_work_arrangement: 'Remote', salary_min: null, salary_max: null, salary_currency: null, ...extra,
 });
 const counts = { total: 12, last7d: 4, interviews: 0 };
 const now = new Date('2026-09-29T14:00:00Z');
-
-test('toMatchPct treats scores as 0-100 (decayed scores below 1 stay tiny)', () => {
-  assert.equal(toMatchPct(0.57), 1);
-  assert.equal(toMatchPct(1), 1);
-  assert.equal(toMatchPct(0.2), 0);
-  assert.equal(toMatchPct(87.6), 88);
-  assert.equal(toMatchPct('81.25'), 81);
-  assert.equal(toMatchPct(140), 100);
-  assert.equal(toMatchPct(-3), 0);
-  assert.equal(toMatchPct(null), null);
-  assert.equal(toMatchPct('abc'), null);
-});
 
 test('formatSalary', () => {
   assert.equal(formatSalary(120000, 150000, 'USD'), '$120,000 - $150,000');
@@ -39,8 +26,9 @@ test('jobUrl carries UTM and rank', () => {
   );
 });
 
-test('dateLabel uses America/Chicago', () => {
+test('dateLabel defaults to America/Chicago and follows the user\'s zone', () => {
   assert.equal(dateLabel(new Date('2026-09-30T03:00:00Z')), 'Tuesday, Sep 29');
+  assert.equal(dateLabel(new Date('2026-09-30T03:00:00Z'), 'Asia/Kolkata'), 'Wednesday, Sep 30');
 });
 
 test('headlineIndex is in range and never repeats on consecutive days', () => {
@@ -55,29 +43,25 @@ test('headlineIndex is in range and never repeats on consecutive days', () => {
   }
 });
 
-test('buildDigest skips already-applied jobs, keeps order, caps at 5, counts the rest', () => {
-  const jobs = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map((id, i) => row(id, 95 - i * 2));
-  jobs[1] = row('b', 93, { is_applied: true });
+test('buildDigest keeps feed order, caps at 5, counts the rest', () => {
+  const jobs = ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map((id) => row(id));
   const p = buildDigest({ userId: 'u1', jobs, counts, now })!;
-  assert.deepEqual(p.jobs.map((j) => j.id), ['a', 'c', 'd', 'e', 'f']);
+  assert.deepEqual(p.jobs.map((j) => j.id), ['a', 'b', 'c', 'd', 'e']);
   assert.deepEqual(p.jobs.map((j) => j.rank), [1, 2, 3, 4, 5]);
   assert.equal(p.job_count, 5);
   assert.equal(p.more_count, 2);
   assert.ok(p.jobs[1].url.endsWith('utm_content=job_2'));
-  assert.equal(p.jobs[0].match_pct, 95);
   assert.equal(p.applied_7d, 4);
   assert.equal(p.date_label, 'Tuesday, Sep 29');
 });
 
 test('buildDigest returns null when fewer than 3 jobs remain', () => {
-  const jobs = [row('a', 90), row('b', 88), row('c', 80, { is_applied: true })];
-  assert.equal(buildDigest({ userId: 'u1', jobs, counts, now }), null);
+  assert.equal(buildDigest({ userId: 'u1', jobs: [row('a'), row('b')], counts, now }), null);
 });
 
-test('buildDigest keeps unscored jobs out and never emits "null" strings', () => {
-  const jobs = [row('a', 90, { company_name: null, location: '  ', ai_work_arrangement: null }), row('b', 80), row('c', 70), row('d', null)];
+test('buildDigest never emits "null" strings', () => {
+  const jobs = [row('a', { company_name: null, location: '  ', ai_work_arrangement: null }), row('b'), row('c')];
   const p = buildDigest({ userId: 'u1', jobs, counts, now })!;
-  assert.deepEqual(p.jobs.map((j) => j.id), ['a', 'b', 'c']);
   assert.equal(p.jobs[0].company, null);
   assert.equal(p.jobs[0].location, null);
   assert.equal(p.jobs[0].salary, null);
@@ -86,7 +70,7 @@ test('buildDigest keeps unscored jobs out and never emits "null" strings', () =>
 
 test('work arrangement is normalized to a short label', () => {
   const pick = (v: string | null) =>
-    buildDigest({ userId: 'u1', jobs: [row('a', 90, { ai_work_arrangement: v }), row('b', 80), row('c', 70)], counts, now })!.jobs[0].work_arrangement;
+    buildDigest({ userId: 'u1', jobs: [row('a', { ai_work_arrangement: v }), row('b'), row('c')], counts, now })!.jobs[0].work_arrangement;
   assert.equal(pick('Remote Solely'), 'Remote');
   assert.equal(pick('Hybrid'), 'Hybrid');
   assert.equal(pick('On-site'), 'On-site');
@@ -106,9 +90,9 @@ test('shortSalary rounds annual amounts to K and ignores hourly-looking values',
 
 test('buildDigest exposes the top salary among emailed jobs and its title', () => {
   const jobs = [
-    row('a', 90, { job_title: 'Analyst', salary_min: 90000, salary_max: 120000, salary_currency: 'USD' }),
-    row('b', 80, { job_title: 'Principal Engineer, AI', salary_min: 210000, salary_max: 285000, salary_currency: 'USD' }),
-    row('c', 70),
+    row('a', { job_title: 'Analyst', salary_min: 90000, salary_max: 120000, salary_currency: 'USD' }),
+    row('b', { job_title: 'Principal Engineer, AI', salary_min: 210000, salary_max: 285000, salary_currency: 'USD' }),
+    row('c'),
   ];
   const p = buildDigest({ userId: 'u1', jobs, counts, now })!;
   assert.equal(p.top_salary, '$285K');
@@ -116,7 +100,7 @@ test('buildDigest exposes the top salary among emailed jobs and its title', () =
 });
 
 test('buildDigest has null top salary when no emailed job lists one', () => {
-  const p = buildDigest({ userId: 'u1', jobs: [row('a', 90), row('b', 80), row('c', 70)], counts, now })!;
+  const p = buildDigest({ userId: 'u1', jobs: [row('a'), row('b'), row('c')], counts, now })!;
   assert.equal(p.top_salary, null);
   assert.equal(p.top_salary_title, null);
 });
@@ -137,7 +121,7 @@ test('subjectIndex changes every day for both the 3- and 7-line pools', () => {
 test('buildDigest sends ready-made subject indexes for each pool (no Liquid modulo)', () => {
   for (let d = 0; d < 10; d++) {
     const day = new Date(now.getTime() + d * 86_400_000);
-    const p = buildDigest({ userId: 'u1', jobs: [row('a', 90), row('b', 80), row('c', 70)], counts, now: day })!;
+    const p = buildDigest({ userId: 'u1', jobs: [row('a'), row('b'), row('c')], counts, now: day })!;
     assert.equal(p.subject_a, p.subject_index % 3);
     assert.equal(p.subject_b, p.subject_index % 7);
   }

@@ -1,35 +1,41 @@
 /**
  * Recommendation dispatcher Lambda
  *
- * Runs daily (EventBridge Scheduler, America/Chicago). For each eligible user
- * it picks their top job matches, records a deduplicated `job_recommendations`
+ * Runs hourly (EventBridge Scheduler). Each run handles the users for whom it
+ * is now SEND_HOUR (9 AM) local time, see ./timezone.ts; for each of them it
+ * picks their top job matches, records a deduplicated `job_recommendations`
  * row (one per user per UTC day), then sends a `daily_job_matches` event to
  * the Customer.io Track API. A Customer.io campaign renders the email.
  *
- * Job listings live on AWS RDS rather than Supabase, so the scan spans two
- * databases: candidate profiles and user embeddings come from Supabase, and
- * the matching itself runs on RDS via `recommend_jobs_aws`. See ./aws-rds.ts.
+ * Matching is the same Typesense search the dashboard's "For You" feed uses
+ * (./feed.ts): one title search per target role from job_preferences, filtered
+ * by years of experience, with sponsor-only searches for users who need a visa.
+ * Profiles and preferences come from Supabase; applications from AWS RDS.
  *
  * The event payload is built by ./digest.ts. Jobs the user already applied to
  * are dropped; users with fewer than 3 remaining jobs get no email that day.
  *
  * Env vars:
  *   SUPABASE_SECRET_ID   ARN/name of the Secrets Manager secret holding
- *                        { "url", "serviceKey", "awsRdsUrl", "cioSiteId", "cioApiKey" }
+ *                        { "url", "serviceKey", "awsRdsUrl", "cioSiteId", "cioApiKey",
+ *                          "typesenseSearchKey", "typesenseUrl"? }
  *   ENVIRONMENT           'production' | 'staging' | 'development' (default production)
  *   PRODUCTION_MODE       'true' to scan; anything else exits immediately
  *   SCAN_BATCH_SIZE       max candidates scanned per run (default 500)
  *   JOBPLY_TEST_USER_IDS  optional comma-separated user ids to scan instead of
  *                         the real candidate list
- *   AWS_RDS_JOBS_TABLE    jobs table on RDS (default scraped_jobs)
  *
- * Deps: @aws-sdk/client-secrets-manager, @supabase/supabase-js, pg, fetch (Customer.io)
+ * Deps: @aws-sdk/client-secrets-manager, @supabase/supabase-js, pg, fetch (Customer.io, Typesense)
  */
 
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { getApplicationCounts, getRdsPool, recommendJobsFromAws, type RecommendedJobRow } from './aws-rds';
+import { getApplicationCounts, getAppliedRows, getRdsPool } from './aws-rds';
+import { buildAppliedMatcher, MAX_EXCLUDED_IDS } from './applied-jobs';
+import { assembleFeed, buildFeedPlan, normalizeRoles, type DigestSourceJob, type FeedProfile } from './feed';
+import { multiSearch, type TypesenseConfig } from './typesense';
 import { buildDigest } from './digest';
+import { localHour, SEND_HOUR, userTimeZone } from './timezone';
 import { deliverDigest } from './deliver';
 import { sendCustomerIoEvent } from './customerio';
 
@@ -40,8 +46,12 @@ const SCAN_BATCH_SIZE = Number(process.env.SCAN_BATCH_SIZE ?? 500);
 interface DispatcherSecret {
   url: string;
   serviceKey: string;
-  /** Postgres URL for the RDS instance holding job listings. */
+  /** Postgres URL for the RDS instance holding applications. */
   awsRdsUrl?: string;
+  /** Search-only Typesense key (the website's TYPESENSE_SEARCH_API_KEY). */
+  typesenseSearchKey?: string;
+  /** Defaults to https://search.jobply.ai */
+  typesenseUrl?: string;
   /** Customer.io Track API credentials. */
   cioSiteId?: string;
   cioApiKey?: string;
@@ -71,6 +81,12 @@ async function getSupabase(): Promise<SupabaseClient> {
   return cachedClient;
 }
 
+async function getTypesenseConfig(): Promise<TypesenseConfig> {
+  const { typesenseSearchKey, typesenseUrl } = await loadSecret();
+  if (!typesenseSearchKey) throw new Error('Supabase secret missing typesenseSearchKey');
+  return { url: typesenseUrl ?? 'https://search.jobply.ai', searchKey: typesenseSearchKey };
+}
+
 async function getJobsPool() {
   const { awsRdsUrl } = await loadSecret();
   if (!awsRdsUrl) throw new Error('Supabase secret missing awsRdsUrl');
@@ -85,15 +101,11 @@ interface JobRecommendationCandidate {
   title: string | null;
 }
 
-/** More than the 5 we email, so jobs the user already applied to can be dropped. */
+/** More than the 5 we email, so URL-matched applied jobs can be dropped and more_count means something. */
 const JOB_RECOMMENDATIONS_LIMIT = 15;
 const TEST_USER_IDS_ENV = process.env.JOBPLY_TEST_USER_IDS;
 
-/**
- * A 1536-dimension embedding serializes to roughly 20 KB, so a full
- * 500-candidate scan would be ~10 MB in one response. Chunking also keeps the
- * user_id IN-list from overflowing PostgREST's request URL.
- */
+/** Keeps the user_id IN-list from overflowing PostgREST's request URL. */
 const CANDIDATE_LOOKUP_CHUNK_SIZE = 50;
 
 function chunk<T>(items: T[], size: number): T[][] {
@@ -103,64 +115,68 @@ function chunk<T>(items: T[], size: number): T[][] {
 }
 
 /**
- * user_embeddings never moved to RDS — only the job listings did — so the
- * vector has to be read from Supabase and shipped to recommend_jobs_aws on
- * every call. Returned as the pgvector literal the function expects.
+ * Everything feed.ts needs per user: target roles (job_preferences.interested_roles, falling
+ * back to profiles.title), years of experience and visa need. Users with no roles are absent.
  */
-async function fetchUserVectors(
+async function fetchFeedProfiles(
+  supabase: SupabaseClient,
+  userIds: string[],
+): Promise<Map<string, FeedProfile>> {
+  const profiles = new Map<string, FeedProfile>();
+
+  for (const ids of chunk(userIds, CANDIDATE_LOOKUP_CHUNK_SIZE)) {
+    const [profileRes, prefsRes] = await Promise.all([
+      supabase.from('profiles').select('id, title, years_of_experience, visa_sponsorship_required').in('id', ids),
+      supabase.from('job_preferences').select('user_id, interested_roles').in('user_id', ids),
+    ]);
+    if (profileRes.error || prefsRes.error) {
+      console.error('feed profile lookup failed', { profiles: profileRes.error, preferences: prefsRes.error });
+      continue;
+    }
+
+    const roles = new Map<string, unknown>(
+      ((prefsRes.data ?? []) as { user_id: string; interested_roles: unknown }[])
+        .map((r) => [r.user_id, r.interested_roles]),
+    );
+    for (const p of (profileRes.data ?? []) as {
+      id: string;
+      title: string | null;
+      years_of_experience: number | null;
+      visa_sponsorship_required: string | null;
+    }[]) {
+      const userRoles = normalizeRoles(roles.get(p.id), p.title);
+      if (!userRoles.length) continue;
+      const years = p.years_of_experience;
+      profiles.set(p.id, {
+        roles: userRoles,
+        yearsOfExperience: typeof years === 'number' && years >= 0 ? years : null,
+        needsVisa: (p.visa_sponsorship_required ?? '').toLowerCase() === 'yes',
+      });
+    }
+  }
+
+  return profiles;
+}
+
+/** Each user's timezone, from profiles.state / country. Missing users get the default. */
+async function fetchTimeZones(
   supabase: SupabaseClient,
   userIds: string[],
 ): Promise<Map<string, string>> {
-  const vectors = new Map<string, string>();
+  const zones = new Map<string, string>();
 
   for (const ids of chunk(userIds, CANDIDATE_LOOKUP_CHUNK_SIZE)) {
-    const { data, error } = await supabase
-      .from('user_embeddings')
-      .select('user_id, embedding')
-      .in('user_id', ids);
-
+    const { data, error } = await supabase.from('profiles').select('id, state, country').in('id', ids);
     if (error) {
-      console.error('user_embeddings lookup failed', error);
+      console.error('timezone lookup failed', error);
       continue;
     }
-
-    for (const row of (data ?? []) as { user_id: string; embedding: unknown }[]) {
-      if (!row.embedding) continue;
-      vectors.set(
-        row.user_id,
-        typeof row.embedding === 'string' ? row.embedding : JSON.stringify(row.embedding),
-      );
+    for (const p of (data ?? []) as { id: string; state: string | null; country: string | null }[]) {
+      zones.set(p.id, userTimeZone(p.state, p.country));
     }
   }
 
-  return vectors;
-}
-
-/** recommend_jobs_aws takes years of experience as a parameter rather than
- *  looking it up, because profiles still live in Supabase. */
-async function fetchYearsOfExperience(
-  supabase: SupabaseClient,
-  userIds: string[],
-): Promise<Map<string, number | null>> {
-  const years = new Map<string, number | null>();
-
-  for (const ids of chunk(userIds, CANDIDATE_LOOKUP_CHUNK_SIZE)) {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, years_of_experience')
-      .in('id', ids);
-
-    if (error) {
-      console.error('years_of_experience lookup failed', error);
-      continue;
-    }
-
-    for (const row of (data ?? []) as { id: string; years_of_experience: number | null }[]) {
-      years.set(row.id, row.years_of_experience ?? null);
-    }
-  }
-
-  return years;
+  return zones;
 }
 
 /** Records a user as evaluated today so a bounded scan advances past them
@@ -229,44 +245,57 @@ async function scanJobRecommendations(supabase: SupabaseClient, opts: ScanOption
 
   if (candidates.length === 0) return 0;
 
+  // Only users for whom it's SEND_HOUR now; the rest are left for their own hour.
+  // Explicit test ids skip the clock so a manual run always produces a digest.
+  const timeZones = await fetchTimeZones(supabase, candidates.map((candidate) => candidate.user_id));
+  const zoneOf = (userId: string) => timeZones.get(userId) ?? userTimeZone(null, null);
+  if (explicitIds.length === 0) {
+    candidates = candidates.filter((candidate) => localHour(now, zoneOf(candidate.user_id)) === SEND_HOUR);
+    if (candidates.length === 0) return 0;
+  }
+
   const { cioSiteId, cioApiKey } = await loadSecret();
   if (!opts.dryRun && (!cioSiteId || !cioApiKey)) throw new Error('Secret missing cioSiteId/cioApiKey');
 
-  // Matching spans two databases: the user's vector and profile come from
-  // Supabase, the jobs and applications from RDS. Lookups are batched up front
-  // so the per-user loop makes one RDS call.
+  // Profiles and preferences come from Supabase, applications from RDS. Lookups
+  // are batched up front so the per-user loop makes one Typesense call.
+  const typesense = await getTypesenseConfig();
   const pool = await getJobsPool();
   const userIds = candidates.map((candidate) => candidate.user_id);
-  const [vectors, yearsOfExperience, applicationCounts] = await Promise.all([
-    fetchUserVectors(supabase, userIds),
-    fetchYearsOfExperience(supabase, userIds),
+  const [feedProfiles, appliedRows, applicationCounts] = await Promise.all([
+    fetchFeedProfiles(supabase, userIds),
+    getAppliedRows(pool, userIds),
     getApplicationCounts(pool, userIds),
   ]);
+  const nowSec = Math.floor(now.getTime() / 1000);
 
   let sent = 0;
 
   for (const candidate of candidates) {
-    const embedding = vectors.get(candidate.user_id);
-    if (!embedding) {
-      // Onboarding never produced a vector; nothing to match against.
-      console.warn('no user embedding, skipping recommendations', { userId: candidate.user_id });
+    const profile = feedProfiles.get(candidate.user_id);
+    if (!profile) {
+      // No target roles and no profile title; nothing to search for.
+      console.warn('no target roles, skipping recommendations', { userId: candidate.user_id });
       if (!opts.dryRun) await markRecommendationCandidateScanned(supabase, candidate.user_id, todayStr);
       continue;
     }
 
-    let jobs: RecommendedJobRow[];
+    const applied = buildAppliedMatcher(appliedRows.get(candidate.user_id) ?? []);
+    const plan = buildFeedPlan(profile, {
+      limit: JOB_RECOMMENDATIONS_LIMIT,
+      excludeIds: applied.ids.slice(0, MAX_EXCLUDED_IDS),
+      nowSec,
+    });
+
+    let jobs: DigestSourceJob[];
     try {
-      jobs = await recommendJobsFromAws(pool, {
-        userId: candidate.user_id,
-        embedding,
-        limit: JOB_RECOMMENDATIONS_LIMIT,
-        yearsOfExperience: yearsOfExperience.get(candidate.user_id) ?? null,
-      });
-    } catch (recError) {
-      // Deliberately no Supabase fallback: its job tables are stale now that
-      // listings live on RDS, so a fallback digest would link to dead postings.
-      // Left unmarked so the user is retried rather than skipped for the day.
-      console.error('recommend_jobs_aws failed', { userId: candidate.user_id, error: recError });
+      // URL-based applications and ids past the exclusion cap can't be expressed in filter_by.
+      jobs = assembleFeed(plan, await multiSearch(typesense, plan.searches))
+        .filter((job) => !applied.isApplied(job));
+    } catch (searchError) {
+      // No fallback to the old embedding matcher. Left unmarked so the user is
+      // retried rather than skipped for the day.
+      console.error('typesense search failed', { userId: candidate.user_id, error: String(searchError) });
       continue;
     }
 
@@ -275,10 +304,11 @@ async function scanJobRecommendations(supabase: SupabaseClient, opts: ScanOption
       jobs,
       counts: applicationCounts.get(candidate.user_id) ?? { total: 0, last7d: 0, interviews: 0 },
       now,
+      timeZone: zoneOf(candidate.user_id),
     });
 
     if (opts.dryRun) {
-      console.log('dry run digest', JSON.stringify({ userId: candidate.user_id, rdsJobs: jobs.length, digest }));
+      console.log('dry run digest', JSON.stringify({ userId: candidate.user_id, roles: profile.roles, matched: jobs.length, digest }));
       continue;
     }
 
