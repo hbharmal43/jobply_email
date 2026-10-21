@@ -2,7 +2,7 @@
  * Recommendation dispatcher Lambda
  *
  * Runs hourly (EventBridge Scheduler). Each run handles the users for whom it
- * is now SEND_HOUR (9 AM) local time, see ./timezone.ts; for each of them it
+ * is now 9 AM on a Monday, Wednesday or Friday local time (./timezone.ts); for each of them it
  * picks their top job matches, records a deduplicated `job_recommendations`
  * row (one per user per UTC day), then sends a `daily_job_matches` event to
  * the Customer.io Track API. A Customer.io campaign renders the email.
@@ -36,7 +36,7 @@ import { buildAppliedMatcher, MAX_EXCLUDED_IDS } from './applied-jobs';
 import { assembleFeed, buildFeedPlan, normalizeRoles, type DigestSourceJob, type FeedProfile } from './feed';
 import { multiSearch, type TypesenseConfig } from './typesense';
 import { buildDigest } from './digest';
-import { isUsTimeZone, localHour, SEND_HOUR, userTimeZone } from './timezone';
+import { daysSinceLastSend, isSendTime, isUsTimeZone, localWeekday, userTimeZone } from './timezone';
 import { deliverDigest } from './deliver';
 import { sendCustomerIoEvent } from './customerio';
 
@@ -247,14 +247,14 @@ async function scanJobRecommendations(supabase: SupabaseClient, opts: ScanOption
 
   if (candidates.length === 0) return 0;
 
-  // Only users for whom it's SEND_HOUR now; the rest are left for their own hour.
+  // Only users at a send slot now (9 AM Mon/Wed/Fri local); the rest wait for theirs.
   // Explicit test ids skip the clock so a manual run always produces a digest.
   const timeZones = await fetchTimeZones(supabase, candidates.map((candidate) => candidate.user_id));
   const zoneOf = (userId: string) => timeZones.get(userId) ?? userTimeZone(null, null);
   if (explicitIds.length === 0) {
     candidates = candidates.filter((candidate) => {
       const zone = zoneOf(candidate.user_id);
-      return localHour(now, zone) === SEND_HOUR && (!DIGEST_US_ONLY || isUsTimeZone(zone));
+      return isSendTime(now, zone) && (!DIGEST_US_ONLY || isUsTimeZone(zone));
     });
     if (candidates.length === 0) return 0;
   }
@@ -290,6 +290,7 @@ async function scanJobRecommendations(supabase: SupabaseClient, opts: ScanOption
       limit: JOB_RECOMMENDATIONS_LIMIT,
       excludeIds: applied.ids.slice(0, MAX_EXCLUDED_IDS),
       nowSec,
+      maxAgeDays: daysSinceLastSend(localWeekday(now, zoneOf(candidate.user_id))),
     });
 
     let jobs: DigestSourceJob[];

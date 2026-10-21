@@ -55,6 +55,11 @@ test('buildFeedPlan: one title search per role, recent jobs only, applied ids ex
   assert.equal(s.filter_by, `date_posted:>=${NOW - EMAIL_MAX_AGE_DAYS * 86400} && is_ghost_job:!=true && id:!=[\`ab\`,\`c\`]`);
 });
 
+test('buildFeedPlan honours maxAgeDays', () => {
+  const s = buildFeedPlan(profile(), { ...opts, maxAgeDays: 2 }).searches[0] as Record<string, any>;
+  assert.ok(s.filter_by.startsWith(`date_posted:>=${NOW - 2 * 86400} `));
+});
+
 test('buildFeedPlan with visa: 20% of the list comes from sponsor-only searches', () => {
   const plan = buildFeedPlan(profile({ roles: ['A', 'B'], needsVisa: true, yearsOfExperience: 1 }), { ...opts, limit: 20 });
   assert.deepEqual(plan.streams.map((s) => [s.role, s.visaOnly, s.perPage]), [

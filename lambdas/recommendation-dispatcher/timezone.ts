@@ -11,6 +11,12 @@ export const DEFAULT_TIME_ZONE = 'America/Chicago';
 /** Local hour (0-23) the digest goes out. The dispatcher runs hourly on the hour. */
 export const SEND_HOUR = 9;
 
+/**
+ * Local weekdays the digest goes out (0 = Sunday): Monday, Wednesday, Friday.
+ * Daily was too much mail for one sender and risked spam filtering.
+ */
+export const SEND_WEEKDAYS = [1, 3, 5];
+
 const EASTERN = 'America/New_York';
 const CENTRAL = 'America/Chicago';
 const MOUNTAIN = 'America/Denver';
@@ -78,6 +84,28 @@ const norm = (v: string | null | undefined) => (v ?? '').trim().toLowerCase().re
 
 export function userTimeZone(state: string | null | undefined, country: string | null | undefined): string {
   return BY_STATE.get(norm(state)) ?? COUNTRIES[norm(country)] ?? DEFAULT_TIME_ZONE;
+}
+
+const WEEKDAY: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+
+/** The weekday (0 = Sunday) on the wall clock in `timeZone` at `now`. */
+export function localWeekday(now: Date, timeZone: string): number {
+  return WEEKDAY[new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short' }).format(now)];
+}
+
+/** True when `now` is a send slot (9 AM on Mon/Wed/Fri) in `timeZone`. */
+export function isSendTime(now: Date, timeZone: string): boolean {
+  return localHour(now, timeZone) === SEND_HOUR && SEND_WEEKDAYS.includes(localWeekday(now, timeZone));
+}
+
+/**
+ * Days since the previous send slot, so each digest covers only jobs posted since the last one:
+ * Monday reaches back to Friday (3 days), Wednesday and Friday 2 days.
+ */
+export function daysSinceLastSend(weekday: number): number {
+  const sorted = [...SEND_WEEKDAYS].sort((a, b) => a - b);
+  const prev = [...sorted].reverse().find((d) => d < weekday) ?? sorted[sorted.length - 1] - 7;
+  return weekday - prev;
 }
 
 /** The hour (0-23) on the wall clock in `timeZone` at `now`. */

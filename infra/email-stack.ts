@@ -61,7 +61,7 @@ export class JobplyEmailStack extends cdk.Stack {
 
     const recommendationDispatcherFn = new NodejsFunction(this, 'RecommendationDispatcherFunction', {
       functionName: `jobply-email-${props.environmentName}-recommendation-dispatcher`,
-      description: 'Sends the daily job digest to users for whom it is 9 AM local (runs hourly)',
+      description: 'Sends the job digest at 9 AM local on Mon/Wed/Fri (runs hourly)',
       entry: 'lambdas/recommendation-dispatcher/handler.ts',
       handler: 'handler',
       // Node 22+ required: @supabase/supabase-js needs native WebSocket
@@ -95,12 +95,12 @@ export class JobplyEmailStack extends cdk.Stack {
     });
     recommendationDispatcherFn.grantInvoke(recommendationSchedulerRole);
 
-    // Hourly on the hour: each run emails the users for whom it's 9 AM local
-    // (lambdas/recommendation-dispatcher/timezone.ts), so everyone gets theirs
-    // at 9 their time. Half-hour zones (India) land at 9:30.
+    // Hourly on the hour: each run emails the users for whom it's 9 AM local on a
+    // Monday, Wednesday or Friday (lambdas/recommendation-dispatcher/timezone.ts).
+    // Half-hour zones (India) land at 9:30.
     new scheduler.CfnSchedule(this, 'DailyRecommendationSchedule', {
       name: `jobply-email-${props.environmentName}-daily-recommendations`,
-      description: 'Hourly: daily job digest for users at 9 AM local time',
+      description: 'Hourly: job digest for users at 9 AM local, Mon/Wed/Fri',
       scheduleExpression: 'cron(0 * * * ? *)',
       scheduleExpressionTimezone: props.recommendationScheduleTimezone ?? 'America/Chicago',
       state: props.dispatcherScheduleEnabled ? 'ENABLED' : 'DISABLED',

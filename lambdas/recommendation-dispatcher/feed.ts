@@ -9,8 +9,8 @@
  *
  * Differences from the website:
  *   - only the first page, ranked "for_you"; no sort switch or paging
- *   - jobs must be posted in the last EMAIL_MAX_AGE_DAYS (the dashboard uses 30), so a daily
- *     email doesn't repeat the same top matches day after day
+ *   - jobs must be posted since the previous digest (maxAgeDays: 2-3 days on the Mon/Wed/Fri
+ *     schedule; the dashboard uses 30), so an email doesn't repeat the last one's matches
  *   - results map to DigestSourceJob (the fields digest.ts renders), not the dashboard card
  *
  * Pure functions only; ./typesense.ts does the HTTP call.
@@ -19,6 +19,7 @@ import { ROLE_CATEGORIES } from './role-categories';
 
 export const MAX_ROLES = 4;
 export const VISA_SHARE = 0.2;
+/** Fallback window when the caller doesn't pass maxAgeDays. */
 export const EMAIL_MAX_AGE_DAYS = 3;
 /** Typesense alias the website searches; the nightly reindex swaps the collection behind it. */
 export const JOBS_ALIAS = 'jobs';
@@ -148,7 +149,7 @@ function escapeValue(v: string): string {
 
 export function buildFeedPlan(
   profile: FeedProfile,
-  opts: { limit: number; excludeIds: string[]; nowSec: number },
+  opts: { limit: number; excludeIds: string[]; nowSec: number; maxAgeDays?: number },
 ): FeedPlan {
   const visaTotal = profile.needsVisa ? Math.round(opts.limit * VISA_SHARE) : 0;
   const roleQuota = splitEvenly(opts.limit - visaTotal, profile.roles.length);
@@ -160,7 +161,7 @@ export function buildFeedPlan(
   ].filter((s) => s.perPage > 0);
 
   const baseFilters = [
-    `date_posted:>=${opts.nowSec - EMAIL_MAX_AGE_DAYS * 86400}`,
+    `date_posted:>=${opts.nowSec - (opts.maxAgeDays ?? EMAIL_MAX_AGE_DAYS) * 86400}`,
     'is_ghost_job:!=true',
     experienceFilter(profile.yearsOfExperience),
     opts.excludeIds.length ? `id:!=[${opts.excludeIds.map(escapeValue).join(',')}]` : null,
