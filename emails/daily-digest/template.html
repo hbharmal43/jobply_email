@@ -6,7 +6,7 @@
 <meta name="x-apple-disable-message-reformatting">
 <meta name="color-scheme" content="light">
 <meta name="supported-color-schemes" content="light">
-<title>Your daily matches</title>
+<title>Your fresh matches</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@800;900&amp;family=Geist:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@600;700&amp;display=swap" rel="stylesheet">
 <style>
   :root { color-scheme: light; supported-color-schemes: light; }
@@ -44,7 +44,7 @@
         <tr>
           <td class="px" style="padding:26px 36px 6px;">
             <p style="margin:0 0 12px;font:700 12px/1 'JetBrains Mono',Menlo,Consolas,monospace;letter-spacing:.12em;text-transform:uppercase;color:#757575;">
-              <span style="display:inline-block;width:8px;height:8px;background:#ffde59;border-radius:50%;margin-right:8px;vertical-align:1px;"></span>Your daily matches
+              <span style="display:inline-block;width:8px;height:8px;background:#ffde59;border-radius:50%;margin-right:8px;vertical-align:1px;"></span>Your fresh matches
             </p>
             <h1 class="h1" style="margin:0 0 10px;font:800 31px/1.18 Outfit,Arial,Helvetica,sans-serif;color:#0A0A0A;letter-spacing:-.01em;">{% case event.headline_index %}{% when 0 %}{% if has_name %}{{ NAME }}, did you ply today? 👀{% else %}Did you ply today? 👀{% endif %}{% when 1 %}{% if has_name %}Job market's rough. You're tougher, {{ NAME }} 💪{% else %}Job market's rough. You're tougher 💪{% endif %}{% when 2 %}{% if has_name %}We know it's brutal out there, {{ NAME }}. 10 more plies this week. You've got this.{% else %}We know it's brutal out there. 10 more plies this week. You've got this.{% endif %}{% when 3 %}{% if has_name %}{{ NAME }}, 1 ply before lunch? 🍜{% else %}1 ply before lunch? 🍜{% endif %}{% when 4 %}{% if has_name %}5 plies today, {{ NAME }}. Future you says thanks 🙏{% else %}5 plies today. Future you says thanks 🙏{% endif %}{% when 5 %}{% if has_name %}Rejections are just redirects, {{ NAME }}. Ply again 🔁{% else %}Rejections are just redirects. Ply again 🔁{% endif %}{% when 6 %}{% if has_name %}Your offer letter won't ply itself, {{ NAME }} 😤{% else %}Your offer letter won't ply itself 😤{% endif %}{% when 7 %}{% if has_name %}{{ NAME }}, your next job is in here. Ply it 🎯{% else %}Your next job is in here. Ply it 🎯{% endif %}{% when 8 %}{% if has_name %}Main character energy only, {{ NAME }}. Ply it ✨{% else %}Main character energy only. Ply it ✨{% endif %}{% when 9 %}{% if has_name %}{{ NAME }}, the market's tough. Consistency is tougher 📈{% else %}The market's tough. Consistency is tougher 📈{% endif %}{% when 10 %}{% if has_name %}Not every ply lands. Every ply counts, {{ NAME }}.{% else %}Not every ply lands. Every ply counts.{% endif %}{% when 11 %}{% if has_name %}{{ NAME }}, new week. Offer letter loading ⏳{% else %}New week. Offer letter loading ⏳{% endif %}{% when 12 %}{% if has_name %}Weekend drop: 5 fresh roles to ply, {{ NAME }} 🔥{% else %}Weekend drop: 5 fresh roles to ply 🔥{% endif %}{% else %}{% if has_name %}Just a few more plies, {{ NAME }}. That's how it happens 🍀{% else %}Just a few more plies. That's how it happens 🍀{% endif %}{% endcase %}</h1>
             <p style="margin:0;font:400 15px/1.6 Geist,-apple-system,'Segoe UI',Arial,sans-serif;color:#555555;">{{ event.job_count }} fresh roles that fit you. <b style="color:#0A0A0A;">You miss 100% of the jobs you don't ply.</b></p>
@@ -129,7 +129,7 @@
         <!-- Footer -->
         <tr>
           <td class="px" style="padding:22px 36px 26px;background:#FAFAF7;border-top:1px solid #E5E5E5;">
-            <p style="margin:0 0 8px;font:400 12px/1.6 Geist,-apple-system,Arial,sans-serif;color:#757575;text-align:center;">You're getting this because you have a Jobply account. One email a day, only when we have strong matches.</p>
+            <p style="margin:0 0 8px;font:400 12px/1.6 Geist,-apple-system,Arial,sans-serif;color:#757575;text-align:center;">You're getting this because you have a Jobply account. Fresh matches every Monday, Wednesday and Friday, only when we have strong ones.</p>
             <p style="margin:0 0 8px;font:400 12px/1.6 Geist,-apple-system,Arial,sans-serif;color:#757575;text-align:center;">Jobply LLC · 1020 W Abram St, Arlington, TX 76013</p>
             <p style="margin:0;font:400 12px/1.6 Geist,-apple-system,Arial,sans-serif;color:#757575;text-align:center;">
               <a href="https://jobply.ai/privacy" target="_blank" rel="noopener" style="color:#757575;">Privacy</a> &nbsp;·&nbsp;
