@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { localHour, userTimeZone } from './timezone';
+import { isUsTimeZone, localHour, userTimeZone } from './timezone';
 
 test('userTimeZone reads state codes and names, state before country', () => {
   assert.equal(userTimeZone('CA', 'United States of America'), 'America/Los_Angeles');
@@ -15,6 +15,13 @@ test('userTimeZone falls back to country, then Central', () => {
   assert.equal(userTimeZone('', 'ph'), 'Asia/Manila');
   assert.equal(userTimeZone(null, 'United States of America'), 'America/Chicago');
   assert.equal(userTimeZone('Somewhere', 'X'), 'America/Chicago');
+});
+
+test('isUsTimeZone covers US states and the Central default only', () => {
+  assert.ok(isUsTimeZone(userTimeZone(null, null)));
+  assert.ok(isUsTimeZone(userTimeZone('HI', null)));
+  assert.ok(!isUsTimeZone(userTimeZone('Gujarat', null)));
+  assert.ok(!isUsTimeZone(userTimeZone('BC', null)));
 });
 
 test('localHour follows DST and half-hour offsets', () => {

@@ -28,6 +28,8 @@ export interface JobplyEmailStackProps extends cdk.StackProps {
   recommendationScanBatchSize?: number;
   recommendationScheduleTimezone?: string;
   dispatcherScheduleEnabled?: boolean;
+  /** Rollout gate: only email users in US timezones. */
+  digestUsOnly?: boolean;
 }
 
 /**
@@ -75,6 +77,7 @@ export class JobplyEmailStack extends cdk.Stack {
         PRODUCTION_MODE: String(props.dispatcherScheduleEnabled ?? false),
         JOBPLY_TEST_USER_IDS: '',
         SCAN_BATCH_SIZE: String(props.recommendationScanBatchSize ?? 500),
+        DIGEST_US_ONLY: String(props.digestUsOnly ?? true),
       },
       bundling: {
         minify: true,

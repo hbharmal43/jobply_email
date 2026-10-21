@@ -22,6 +22,7 @@
  *   ENVIRONMENT           'production' | 'staging' | 'development' (default production)
  *   PRODUCTION_MODE       'true' to scan; anything else exits immediately
  *   SCAN_BATCH_SIZE       max candidates scanned per run (default 500)
+ *   DIGEST_US_ONLY        'true' to email only users in US timezones (rollout gate)
  *   JOBPLY_TEST_USER_IDS  optional comma-separated user ids to scan instead of
  *                         the real candidate list
  *
@@ -35,13 +36,14 @@ import { buildAppliedMatcher, MAX_EXCLUDED_IDS } from './applied-jobs';
 import { assembleFeed, buildFeedPlan, normalizeRoles, type DigestSourceJob, type FeedProfile } from './feed';
 import { multiSearch, type TypesenseConfig } from './typesense';
 import { buildDigest } from './digest';
-import { localHour, SEND_HOUR, userTimeZone } from './timezone';
+import { isUsTimeZone, localHour, SEND_HOUR, userTimeZone } from './timezone';
 import { deliverDigest } from './deliver';
 import { sendCustomerIoEvent } from './customerio';
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? 'production';
 const PRODUCTION_MODE = process.env.PRODUCTION_MODE === 'true';
 const SCAN_BATCH_SIZE = Number(process.env.SCAN_BATCH_SIZE ?? 500);
+const DIGEST_US_ONLY = process.env.DIGEST_US_ONLY === 'true';
 
 interface DispatcherSecret {
   url: string;
@@ -250,7 +252,10 @@ async function scanJobRecommendations(supabase: SupabaseClient, opts: ScanOption
   const timeZones = await fetchTimeZones(supabase, candidates.map((candidate) => candidate.user_id));
   const zoneOf = (userId: string) => timeZones.get(userId) ?? userTimeZone(null, null);
   if (explicitIds.length === 0) {
-    candidates = candidates.filter((candidate) => localHour(now, zoneOf(candidate.user_id)) === SEND_HOUR);
+    candidates = candidates.filter((candidate) => {
+      const zone = zoneOf(candidate.user_id);
+      return localHour(now, zone) === SEND_HOUR && (!DIGEST_US_ONLY || isUsTimeZone(zone));
+    });
     if (candidates.length === 0) return 0;
   }
 

@@ -67,6 +67,13 @@ const BY_STATE = new Map<string, string>([
   ...Object.entries(OTHER_STATES),
 ]);
 
+const US_ZONES = new Set(US_STATES.map(([, , tz]) => tz));
+
+/** US zones, including users with no known location (they default to Central). */
+export function isUsTimeZone(timeZone: string): boolean {
+  return US_ZONES.has(timeZone);
+}
+
 const norm = (v: string | null | undefined) => (v ?? '').trim().toLowerCase().replace(/\.$/, '');
 
 export function userTimeZone(state: string | null | undefined, country: string | null | undefined): string {

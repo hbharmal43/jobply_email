@@ -36,6 +36,7 @@ new JobplyEmailStack(app, `JobplyEmail-${environmentName}`, {
   recommendationScheduleTimezone:
     String(app.node.tryGetContext('recommendationScheduleTimezone') ?? 'America/Chicago'),
   dispatcherScheduleEnabled,
+  digestUsOnly: String(app.node.tryGetContext('digestUsOnly') ?? 'true').toLowerCase() === 'true',
   supabaseSecretName: `jobply-email/${environmentName}/supabase`,
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
