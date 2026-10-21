@@ -43,7 +43,7 @@ Two email styles:
 | Email | Style | Trigger | Customer.io | Status |
 |---|---|---|---|---|
 | Welcome | Branded | Profile created (signup); CTA depends on `onboarding_completed` | Campaign 1. Action 2 is a 50/50 subject split: variant A = action 9 / node `a0f789bc-aacd-4cd2-aa48-a502191b530d`, variant B = action 10 / node `cd949f54-0d25-4cba-b608-8da58910b985`. Body edits must be made on **both** nodes and republished. Old design archived as node `5e362698-…` (unlinked). Source: `emails/welcome/template.html` | **Live since 2026-09-29.** A: "You're in, {name}. Let's land your next job" / B: "Welcome to Jobply 👋 Apply to your next job in one click". From hello@, reply-to hasnain@. Judge on clicks (Apple Mail inflates opens); metrics at `GET /actions/2/split_metrics`, pick a winner with `POST /actions/2/winner` |
-| Daily job digest | Branded | Daily `daily_job_matches` event from the recommendation dispatcher (per-user send time later) | Campaign 5 (draft). Split action 12 [50/50]: A = action 13 / node `02609e5f-8c29-4fd1-91a8-a039fa131a9f`, B = action 14 / node `6e5c4c14-a778-4aa4-9224-ea9e1d94964a`. Body edits go on **both** nodes. Source `emails/daily-digest/template.html`; spec `docs/specs/2026-09-29-daily-digest-design.md` | Built and tested, not live. Subjects rotate daily: A "Money" (`subject_a`, 3 lines: salary / role / company), B "Nudge" (`subject_b`, 7 lowercase lines, the user's favourite). Use `case/when` on dispatcher-sent indexes; Customer.io's `modulo` compares unreliably. Blocked on: website `/dashboard/jobs/[id]` crash fix, then "go live" |
+| Daily job digest | Branded | `daily_job_matches` event from the dispatcher, which runs hourly and sends at 9 AM each user's local time (timezone inferred from `profiles.state`/`country`, default Central) | Campaign 5 (running). Split action 12 [50/50]: A = action 13 / node `02609e5f-8c29-4fd1-91a8-a039fa131a9f`, B = action 14 / node `6e5c4c14-a778-4aa4-9224-ea9e1d94964a`. Body edits go on **both** nodes. Source `emails/daily-digest/template.html`; spec `docs/specs/2026-09-29-daily-digest-design.md` | **Live since 2026-10-21, US timezones only** (`digestUsOnly` in `cdk.json`; deploy with `-c digestUsOnly=false` to add India and others). Matching is Typesense. Subjects rotate daily: A "Money" (`subject_a`, 3 lines: salary / role / company), B "Nudge" (`subject_b`, 7 lowercase lines, the user's favourite). Use `case/when` on dispatcher-sent indexes; Customer.io's `modulo` compares unreliably. Judge A/B on clicks: `GET /campaigns/5/split_metrics` |
 | Onboarded but didn't apply | Founder | ~3 days after onboarding, 0 applications (count from RDS); ask what stopped them | — | Not started |
 | Why are you leaving? | Founder | Account deleted | — | Not started |
 | Is Jobply still useful? | Founder | Was active, then quiet ~2 weeks | — | Not started |
@@ -54,7 +54,7 @@ Two email styles:
 npm run build                     # tsc --noEmit — the only static check; there are no tests or linter
 npx cdk synth  -c env=development
 npx cdk diff   -c env=development --no-change-set
-npx cdk deploy -c env=development -c enableDispatch=false --require-approval never   # paused
+npx cdk deploy -c env=development -c enableDispatch=true --require-approval never    # LIVE (hourly digest); enableDispatch=false pauses it
 ```
 
 `enableDispatch=true` enables the daily schedule against real users (see `docs/operations.md`). Never deploy that without explicit user approval.
@@ -62,7 +62,7 @@ npx cdk deploy -c env=development -c enableDispatch=false --require-approval nev
 ## Architecture
 
 ```
-Scheduler (9 AM America/Chicago) ─▶ recommendation dispatcher Lambda (lambdas/recommendation-dispatcher/handler.ts)
+Scheduler (hourly; users at 9 AM local) ─▶ recommendation dispatcher Lambda (lambdas/recommendation-dispatcher/handler.ts)
    Supabase: get_job_recommendation_candidates, profiles, job_preferences.interested_roles
    RDS:      applications (counts + already-applied; lambdas/recommendation-dispatcher/aws-rds.ts)
    Typesense: search.jobply.ai multi_search, one title search per target role (feed.ts)
@@ -77,7 +77,7 @@ Scheduler (9 AM America/Chicago) ─▶ recommendation dispatcher Lambda (lambda
 ## Gotchas
 
 - **The `development` stack runs against real production users.** Profiles have no environment column, so `infra/app.ts` pins `ENVIRONMENT=production` for it (2026-07-28 drift incident). Don't "fix" this to `development`.
-- **Paused is the default** (`cdk.json` → `enableDispatch: false`): the schedule is disabled and the handler exits immediately (`PRODUCTION_MODE=false`).
+- **Paused is the `cdk.json` default** (`enableDispatch: false`), but the digest is **live**: every deploy must pass `-c enableDispatch=true`, or it silently pauses the daily email for everyone.
 - **Remove AWS resources through CDK** (delete from `infra/email-stack.ts`, then `cdk deploy`), not the AWS CLI. The CLI is only for leftovers outside the stack; deleting stack resources directly breaks future deploys.
 - The SES domain identity `jobply.ai` is intentionally kept; Supabase auth emails may send through it.
 - **SQL migrations** live in `database/migrations/` (numbered files are the original schema, timestamped files are later changes). All target Supabase and are still the record of `email_internal` objects the dispatcher uses. Nothing in this repo applies them automatically.
